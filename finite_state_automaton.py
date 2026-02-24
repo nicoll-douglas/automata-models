@@ -1,12 +1,15 @@
 from __future__ import annotations
 from collections import defaultdict, deque
+from collections.abc import Set
 from graphviz import Digraph
+from typing import Generic
 import pprint
 
 class FSA:
     type Alphabet = set[str]
     type Transition = tuple[State, str, State]
     type TransitionTable = defaultdict[tuple[State, str], set[State]]
+    type DFASetTransitionTable = dict[tuple[frozenset[State], str], frozenset[State]]
 
     _transitions: set[Transition]
     _alphabet: Alphabet
@@ -37,8 +40,11 @@ class FSA:
     class State:
         label: str
 
-        def __init__(self, label: str):
-            self.label = label
+        def __init__(self, label: str | Set[FSA.State]):
+            if isinstance(label, str):
+                self.label = label
+            else:
+                self.label = "{" + ", ".join(state.label for state in label) + "}"
 
     @property
     def states(self) -> set[State]:
@@ -137,22 +143,23 @@ class FSA:
 
     @property
     def transition_table(self) -> TransitionTable:
-        al: TransitionTable = defaultdict(set) 
+        al: FSA.TransitionTable = defaultdict(set) 
 
         for start_state, letter, end_state in self.transitions:
             al[(start_state, letter)].add(end_state)
 
         return al 
 
-    @property
-    def epsilon_closure(self) -> set[State]:
-        transition_table: TransitionTable = self.transition_table
-        closure: set[State] = {self.initial_state}
-        queue: deque[State] = deque([self.initial_state])
+    def epsilon_closure(self, starting_state: State) -> set[State]:
+        if starting_state not in self.states: raise ValueError("Starting state must be in the set of states to find the epsilon-closure")
+
+        transition_table: FSA.TransitionTable = self.transition_table
+        closure: set[FSA.State] = {starting_state}
+        queue: deque[FSA.State] = deque([starting_state])
 
         while queue:
-            current: State = queue.popleft()
-            next_states: set[State] = transition_table[(current, "")]
+            current: FSA.State = queue.popleft()
+            next_states: set[FSA.State] = transition_table[(current, "")]
 
             for state in next_states:
                 if state not in closure:
@@ -161,12 +168,60 @@ class FSA:
 
         return closure 
 
-    def get_deterministic(self) -> FSA:
+    def subset_construction(self) -> FSA:
         if self.deterministic: return self
 
-        transition_table: TransitionTable = self.transition_table
-        epsilon_closure: set[State] = self.epsilon_closure
+        # step 1: get the NFA transition table and DFA initial state (NFA epsilon closure)
+        nfa_transition_table: FSA.TransitionTable = self.transition_table
+        dfa_initial_state: frozenset[FSA.State] = frozenset(self.epsilon_closure(self.initial_state))
 
+        # step 2: discover all DFA states and construct the DFA transition table 
+        queue: deque[frozenset[FSA.State]] = deque([dfa_initial_state])
+        dfa_states: set[frozenset[FSA.State]] = {dfa_initial_state}
+        dfa_transition_table: FSA.DFASetTransitionTable = {}
+
+        while queue:
+            current_dfa_state: frozenset[FSA.State] = queue.popleft()
+
+            for letter in self.alphabet:
+                # step 2.1: find all reachable states in the NFA from the set of NFA states in the current DFA states
+                reachable_states: frozenset[FSA.State] = set()
+
+                for nfa_state in current_dfa_state:
+                    for transition_state in nfa_transition_table[(nfa_state, letter)]:
+                        reachable_states.update(self.epsilon_closure(transition_state))
+
+                # step 2.2: construct the next DFA state from the reachables
+                next_dfa_state: frozenset[FSA.State] = frozenset(reachable_states)
+
+                # if nothing is reachable, then we will point the transition to the dummy state (represented by the empty set here)
+                dfa_transition_table[(current_dfa_state, letter)] = next_dfa_state
+
+                if next_dfa_state not in dfa_states:
+                    dfa_states.add(next_dfa_state) 
+                    queue.append(next_dfa_state)
+        
+        # step 3: construct the new automaton and identify the DFA final states
+        dfa_state_map: dict[frozenset[FSA.State], FSA.State] = {
+            dfa_state: self.State(dfa_state)
+            for dfa_state in dfa_states
+        }
+
+        return FSA(
+            alphabet=self.alphabet.copy(),
+            initial_state=dfa_state_map[dfa_initial_state],
+            final_states={
+                dfa_state_map[dfa_state]
+                for dfa_state in dfa_states
+                if any(nfa_state in self.final_states for nfa_state in dfa_state)
+            },
+            states=set(dfa_state_map.values()),
+            transitions={
+                (dfa_state_map[start_state], letter, dfa_state_map[end_state])
+                for (start_state, letter), end_state in dfa_transition_table.items()
+            }
+        )
+       
     def _validate_states(self, states: set[State]) -> str | None:
         """Validate whether the given set of states is a valid assignment for the automaton's states.
 
@@ -206,21 +261,17 @@ class FSA:
 
 
 
-q: list[FSA.State] = [FSA.State("q0"), FSA.State("q1"), FSA.State("q2")]
+q0: FSA.State = FSA.State("q0")
+q1: FSA.State = FSA.State("q1")
 
 fsa: FSA = FSA(
-    states=set(q),
-    initial_state=q[0],
-    final_states={q[1]},
+    states={q0, q1},
+    initial_state=q0,
+    final_states=set(),
     alphabet={"a", "b"},
     transitions={
-        (q[0], "a", q[0]),
-        (q[0], "b", q[1]),
-        (q[1], "a", q[1]),
-        (q[1], "b", q[2]),
-        (q[2], "a", q[2]),
-        (q[2], "b", q[0]),
+        (q0, "a", q1),
     }
 )
 
-fsa.draw("fsa_output")
+fsa.subset_construction().draw("fsa_output_2")
