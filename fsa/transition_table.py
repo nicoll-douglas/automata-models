@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .state import State
-from typing import override, Mapping, Callable, Set
+from typing import override, Mapping, Callable, AbstractSet
 from utils import ObservableSet
 
 class TransitionTable(dict):
@@ -14,12 +14,12 @@ class TransitionTable(dict):
 
     type Key = tuple[State, str]
     type Value = ObservableSet[State]
-    type OnItemHook = Callable[[Key, Value], None]
+    type OnItemHook = Callable[[Key, AbstractSet[State]], None]
     type OnValueMutateHook = Callable[[State], None]
 
     def __init__(
         self, 
-        data: Mapping[Key, Set[State]] | None = None,
+        data: Mapping[Key, AbstractSet[State]] | None = None,
         pre_setitem: OnItemHook | None = None,
         pre_value_add: OnValueMutateHook | None = None,
         pre_value_discard: OnValueMutateHook | None = None,
@@ -58,8 +58,13 @@ class TransitionTable(dict):
             self.update(kwargs)
 
     @override
-    def __setitem__(self, key: Key, value: Set[State]) -> None:
-        self._pre_setitem(key, value)
+    def __getitem__(self, key: Key) -> Value:
+        return super().__getitem__(key)
+
+    @override
+    def __setitem__(self, key: Key, value: AbstractSet[State]) -> None:
+        if self._pre_setitem is not None:
+            self._pre_setitem(key, value)
 
         super().__setitem__(
             key, 
@@ -72,7 +77,6 @@ class TransitionTable(dict):
             )
         )
     
-    @override
     def __missing__(self, key: Key) -> Value:
         """If the key is a valid key, return an empty set indicating 
         no end states for that transition."""

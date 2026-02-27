@@ -1,12 +1,12 @@
 from collections.abc import MutableSet
-from typing import override, Iterable, Iterator, Callable
+from typing import override, Iterable, Iterator, Callable, TypeVar
 
 class ObservableSet[T](MutableSet[T]):
     """Abstract base class representing a set that validates items 
     before insertion.
     """
 
-    type Hook = Callable[[T], None]
+    type Hook[U] = Callable[[U], None]
 
     # the underlying set data
     _data: set[T]
@@ -18,10 +18,10 @@ class ObservableSet[T](MutableSet[T]):
     def __init__(
         self, 
         iterable: Iterable[T] | None = None,
-        pre_add: Hook | None = None,
-        pre_discard: Hook | None = None,
-        post_add: Hook | None = None,
-        post_discard: Hook | None = None
+        pre_add: Hook[T] | None = None,
+        pre_discard: Hook[T] | None = None,
+        post_add: Hook[T] | None = None,
+        post_discard: Hook[T] | None = None
     ):
         self._data = set()
         self._pre_add = pre_add
@@ -54,11 +54,11 @@ class ObservableSet[T](MutableSet[T]):
             self._post_discard(element)
 
     @classmethod
-    def _from_iterable(cls, iterable: Iterable[T]) -> None:
+    def _from_iterable(cls, iterable: Iterable[T]) -> ObservableSet[T]:
         return cls(iterable)
 
     @override
-    def __contains__(self, element: T) -> bool:
+    def __contains__(self, element: object) -> bool:
         return element in self._data
 
     @override

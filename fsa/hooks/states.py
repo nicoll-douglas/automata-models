@@ -1,8 +1,8 @@
 from ..state import State
-from typing import Set, Callable
+from typing import AbstractSet, MutableSet
 from ..transition_table import TransitionTable
 
-def pre_add(state: State, states: Set[State]) -> None:
+def pre_add(state: State, states: AbstractSet[State]) -> None:
     if state not in states and state.label in {
         s.label for s in states
     }:
@@ -13,9 +13,9 @@ def pre_add(state: State, states: Set[State]) -> None:
  
 def pre_discard(
     state: State, 
-    states: Set[State],
+    states: AbstractSet[State],
     initial_state: State,
-    final_states: Set[State],
+    final_states: MutableSet[State],
     transition_table: TransitionTable,
 ) -> None:
     if state == initial_state:

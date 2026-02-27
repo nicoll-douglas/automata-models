@@ -1,4 +1,4 @@
-from typing import Set
+from typing import AbstractSet
 
 class State:
     """Represents a state in an FSA."""
@@ -6,7 +6,7 @@ class State:
     # the state's arbitrary label for diagrams
     _label: str 
 
-    def __init__(self, label: str | Set[State]):
+    def __init__(self, label: str | AbstractSet[State]):
         self._label = (
             label 
             if isinstance(label, str)
