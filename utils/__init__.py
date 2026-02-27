@@ -1,5 +1,5 @@
-from .validation_set import ValidationSet
+from .observable_set import ObservableSet
 
 __all__ = [ 
-    "ValidationSet"
+    "ObservableSet"
 ]

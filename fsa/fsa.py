@@ -1,19 +1,22 @@
 from __future__ import annotations
 from collections import deque, defaultdict
 from typing import Set, Callable
-from .alphabet import Alphabet
 from .state import State
 from .word import EPSILON
-from .state_set import StateSet
-from .state_subset import StateSubset
 from .transition_table import TransitionTable
-from .tools import subset_construction
+from .utils import subset_construction
+from . import hooks
+from utils import ObservableSet
 
 class FSA:
     """Represents a finite-state automaton (FSA) and contains algorithms 
     that operate on it."""
 
+    _initial_state: State
+    _states: ObservableSet[State]
+    _final_states: ObservableSet[State]
     _transition_table: TransitionTable
+    _alphabet: ObservableSet[str]
 
     def __init__(
         self,
@@ -23,73 +26,94 @@ class FSA:
         transitions: Set[tuple[State, str, State]] | None = None,
         final_states: Set[State] | None = None
     ):
-        state_set_func: Callable[[TransitionTable], StateSet] = (
-            lambda tt: StateSet(
-                initial_state=initial_state,
-                final_states=final_states,
-                states=states,
-                transition_table=tt
+        self._initial_state = initial_state
+        self._alphabet = self._alphabet_from_set(alphabet)
+        self._final_states = self._final_states_from_set(final_states)
+
+        self._states = ObservableSet[State](
+            states,
+            pre_add=lambda state: hooks.states.pre_add(state, self.states),
+            pre_discard=lambda state: hooks.states.pre_discard(
+                state=state,
+                states=self.states,
+                initial_state=self.initial_state,
+                final_states=self.final_states,
+                transition_table=self.transition_table
             )
         )
-        alphabet_func: Callable[[TransitionTable], Alphabet] = (
-            lambda tt: Alphabet(
-                alphabet=alphabet,
-                transition_table=tt
-            )
+        self._alphabet = ObservableSet[str](
+            alphabet,
+            pre_add=lambda letter: hooks.alphabet.pre_add(letter),
+            pre_discard=lambda letter: hooks.alphabet.pre_discard(
+                letter=letter, 
+                transition_table=self.transition_table
+            ),
         )
-
-        data: defaultdict[
-            TransitionTable.Key,
-            Set[State]
-        ] | None
-
-        if transitions is not None:
-            data = defaultdict(set)
-
-            for start_state, letter, end_state in transitions:
-                data[(start_state, letter)].add(end_state)
-        else:
-            data = None
-
         self._transition_table = TransitionTable(
-            states=state_set_func,
-            alphabet=alphabet_func,
-            data=data
+            (
+                {
+                    (start_state, label): end_state
+                    for start_state, label, end_state
+                    in transitions
+                }
+                if transitions
+                else None
+            ),
+            pre_setitem=(
+                lambda key, value: hooks.transition_table.pre_setitem(
+                    key=key,
+                    value=value,
+                    states=self.states,
+                    alphabet=self.alphabet
+                )
+            ),
+            pre_value_add=lambda state: hooks.transition_table.pre_value_add(
+                state=state,
+                possible_states=self.states
+            ),
         )
 
     @property
-    def states(self) -> StateSet:
+    def states(self) -> ObservableSet[State]:
         """Get the FSA's set of states."""
-        return self._transition_table._states
+        return self._states
     
     @property
     def initial_state(self) -> State:
-        return self._transition_table._states._initial_state
+        return self._initial_state
     
     @initial_state.setter
     def initial_state(self, value: State) -> None:
-        self._transition_table._states._initial_state = value
+        if value not in self.states:
+            raise ValueError(
+                f"Expected a state in the set of states {self.states}. "
+                f"Got {value}."
+            )
+        
+        self._initial_state = value
     
     @property
-    def final_states(self) -> StateSubset:
-        return self._transition_table._states._final_states
+    def final_states(self) -> ObservableSet[State]:
+        return self._final_states
     
     @final_states.setter
-    def final_states(self, value: Set[State]) -> None:
-        self._transition_table._states._final_states = value
+    def final_states(self, value: Set[State]) -> None:        
+        self._final_states = self._final_states_from_set(value)
     
     @property
-    def alphabet(self) -> Alphabet:
-        return self._transition_table._alphabet
+    def alphabet(self) -> ObservableSet[str]:
+        return self._alphabet
     
     @alphabet.setter
     def alphabet(self, value: Set[str]) -> None:
-        self._transition_table._alphabet = value
+        for start_state, letter in list(self.transition_table.keys()):
+            if letter not in value:
+                del self.transition_table[(start_state, letter)]
+        
+        self._alphabet = self._alphabet_from_set(value)
     
     @property
-    def transition_table(
-        self
-    ) -> TransitionTable:
+    def transition_table(self) -> TransitionTable:
         return self._transition_table
     
     @property
@@ -98,8 +122,8 @@ class FSA:
         deterministic FSA (DFA) or not."""
         return all(
             label != EPSILON
-            and len(end_states) <= 1
-            for (_, label), end_states in self.transition_table.items()
+            and len(self.delta(state, label)) <= 1
+            for state, label in self.transition_table.keys()
         )
     
     @property
@@ -140,8 +164,8 @@ class FSA:
 
         return "NFA"
 
-    def delta(self, state: State, label: str) -> StateSubset:        
-        return self.transition_table[(state, label)]
+    def delta(self, state: State, label: str) -> frozenset[State]:        
+        return frozenset(self.transition_table[(state, label)])
 
     def accepts(self, word: str) -> bool:
         """Return True if the FSA accepts the given word otherwise 
@@ -197,7 +221,7 @@ class FSA:
         current_state: State = dfa.initial_state
 
         for letter in word:
-            next_states: StateSubset = dfa.delta(current_state, letter)
+            next_states: frozenset[State] = dfa.delta(current_state, letter)
 
             # no next state so we hit a dead-end which means the word 
             # is not accepted
@@ -207,3 +231,73 @@ class FSA:
             (current_state, ) = next_states
 
         return current_state in dfa.final_states
+    
+    def _final_states_from_set(
+        self, 
+        final_states: Set[State] | None = None
+    ) -> ObservableSet[State]:
+        return ObservableSet[State](
+            final_states,
+            pre_discard=lambda state: self.states.discard(state),
+            pre_add=lambda state: hooks.final_states.pre_add(
+                state=state, 
+                possible_states=self.states
+            )
+        )
+    
+    def _states_from_set(
+        self,
+        states: Set[State]
+    ) -> ObservableSet[State]:
+        return ObservableSet[State](
+            states,
+            pre_add=lambda state: hooks.states.pre_add(state, self.states),
+            pre_discard=lambda state: hooks.states.pre_discard(
+                state=state,
+                states=self.states,
+                initial_state=self.initial_state,
+                final_states=self.final_states,
+                transition_table=self.transition_table
+            )
+        )
+    
+    def _alphabet_from_set(
+        self,
+        alphabet: Set[str] | None = None
+    ) -> ObservableSet[str]:
+        return ObservableSet[str](
+            alphabet,
+            pre_add=lambda letter: hooks.alphabet.pre_add(letter),
+            pre_discard=lambda letter: hooks.alphabet.pre_discard(
+                letter=letter, 
+                transition_table=self.transition_table
+            ),
+        )
+    
+    def _transition_table_from_set(
+        self,
+        transitions: Set[State, str, State] | None = None
+    ) -> TransitionTable:
+        return TransitionTable(
+            (
+                {
+                    (start_state, label): end_state
+                    for start_state, label, end_state
+                    in transitions
+                }
+                if transitions is not None
+                else None
+            ),
+            pre_setitem=(
+                lambda key, value: hooks.transition_table.pre_setitem(
+                    key=key,
+                    value=value,
+                    states=self.states,
+                    alphabet=self.alphabet
+                )
+            ),
+            pre_value_add=lambda state: hooks.transition_table.pre_value_add(
+                state=state,
+                possible_states=self.states
+            ),
+        )

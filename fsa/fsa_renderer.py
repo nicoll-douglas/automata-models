@@ -1,5 +1,8 @@
 from graphviz import Digraph
-from .fsa import FSA
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .fsa import FSA
 
 class FSARenderer:
     """Represents a renderer object that can render FSA diagrams."""
@@ -7,7 +10,7 @@ class FSARenderer:
     # the label used for epsilon-transitions
     EPSILON_LABEL: str = "\u03b5"
 
-    def render(self, fsa: FSA, filename: str, open_file: bool = True) -> None:
+    def render(self, fsa: "FSA", filename: str, open_file: bool = True) -> None:
         """Create an image representation of the given FSA and optionally 
         open the image file.
 
