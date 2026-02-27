@@ -26,7 +26,36 @@ class FSA:
         final_states: AbstractSet[State] | None = None
     ):
         self._initial_state = initial_state
-        self.states = states
+
+        hooks.states.pre_set(
+            new_states=states, 
+            current_initial_state=self.initial_state
+        )
+
+        states_processed: set[State] = set()
+
+        self._states = ObservableSet[State](
+            states,
+            pre_add=lambda state: hooks.states.pre_add(
+                new_state=state,
+                current_states=states_processed
+            ),
+            post_add=lambda state: states_processed.add(state),
+            pre_discard=lambda state: hooks.states.pre_discard(
+                state=state,
+                current_states=self.states,
+                current_initial_state=self.initial_state,
+                current_final_states=self.final_states,
+                current_transition_table=self.transition_table
+            )
+        )
+
+        self._states._post_add = None
+        self._states._pre_add = lambda state: hooks.states.pre_add(
+            new_state=state,
+            current_states=self.states
+        )
+
         self._alphabet = self._alphabet_from_set(alphabet)
         self._final_states = self._final_states_from_set(final_states)
         self._transition_table = self._transition_table_from_set(transitions)
@@ -38,13 +67,25 @@ class FSA:
     
     @states.setter
     def states(self, value: AbstractSet[State]) -> None:
-        if self.initial_state not in value:
-            raise ValueError(
-                "Expected a set containing the initial state "
-                f"{self.initial_state}. Got {value}."
-            )
+        hooks.states.pre_set(
+            new_states=value, 
+            current_initial_state=self.initial_state
+        )
         
-        self._states = self._states_from_set(value)
+        self._states = ObservableSet[State](
+            value,
+            pre_add=lambda state: hooks.states.pre_add(
+                new_state=state, 
+                current_states=self.states
+            ),
+            pre_discard=lambda state: hooks.states.pre_discard(
+                state=state,
+                current_states=self.states,
+                current_initial_state=self.initial_state,
+                current_final_states=self.final_states,
+                current_transition_table=self.transition_table
+            )
+        )
     
     @property
     def initial_state(self) -> State:
@@ -351,24 +392,8 @@ class FSA:
             final_states,
             pre_discard=lambda state: self.states.discard(state),
             pre_add=lambda state: hooks.final_states.pre_add(
-                state=state, 
-                possible_states=self.states
-            )
-        )
-    
-    def _states_from_set(
-        self,
-        states: AbstractSet[State]
-    ) -> ObservableSet[State]:
-        return ObservableSet[State](
-            states,
-            pre_add=lambda state: hooks.states.pre_add(state, self.states),
-            pre_discard=lambda state: hooks.states.pre_discard(
-                state=state,
-                states=self.states,
-                initial_state=self.initial_state,
-                final_states=self.final_states,
-                transition_table=self.transition_table
+                new_final_state=state, 
+                current_states=self.states
             )
         )
     
@@ -381,7 +406,7 @@ class FSA:
             pre_add=lambda letter: hooks.alphabet.pre_add(letter),
             pre_discard=lambda letter: hooks.alphabet.pre_discard(
                 letter=letter, 
-                transition_table=self.transition_table
+                current_transition_table=self.transition_table
             ),
         )
     
@@ -404,12 +429,12 @@ class FSA:
                 lambda key, value: hooks.transition_table.pre_setitem(
                     key=key,
                     value=value,
-                    states=self.states,
-                    alphabet=self.alphabet
+                    current_states=self.states,
+                    current_alphabet=self.alphabet
                 )
             ),
             pre_value_add=lambda state: hooks.transition_table.pre_value_add(
-                state=state,
-                possible_states=self.states
+                new_state=state,
+                current_states=self.states
             ),
         )

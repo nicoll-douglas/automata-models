@@ -1,9 +1,12 @@
 from ..state import State
 from typing import AbstractSet
 
-def pre_add(state: State, possible_states: AbstractSet[State]) -> None:
-    if state not in possible_states:
+def pre_add(
+    new_final_state: State,
+    current_states: AbstractSet[State]
+) -> None:
+    if new_final_state not in current_states:
         raise ValueError(
             "Expected a state in the set of possible states "
-            f"{possible_states}. Got {state}."
+            f"{current_states}. Got {new_final_state}."
         )

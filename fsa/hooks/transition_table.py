@@ -6,34 +6,37 @@ from typing import AbstractSet
 def pre_setitem(
     key: TransitionTable.Key,
     value: AbstractSet[State],
-    states: AbstractSet[State],
-    alphabet: AbstractSet[str]
+    current_states: AbstractSet[State],
+    current_alphabet: AbstractSet[str]
 ) -> None:
     state: State
     label: str
     state, label = key
     
-    if state not in states:
+    if state not in current_states:
         raise ValueError(
-            f"Expected a state in the set of states {states}. "
+            f"Expected a state in the set of states {current_states}. "
             f"Got {state}."
         )
     
-    if label not in alphabet and label != EPSILON:
+    if label not in current_alphabet and label != EPSILON:
         raise ValueError(
-            f"Expected a letter in the alphabet {alphabet} or "
+            f"Expected a letter in the alphabet {current_alphabet} or "
             f"epsilon. Got '{label}'."
         )
     
-    if not value <= states:
+    if not value <= current_states:
         raise ValueError(
-            f"Expected a subset of the set of states {states}. "
+            f"Expected a subset of the set of states {current_states}. "
             f"Got {value}."
         )
     
-def pre_value_add(state: State, possible_states: AbstractSet[State]) -> None:
-    if state not in possible_states:
+def pre_value_add(
+    new_state: State, 
+    current_states: AbstractSet[State]
+) -> None:
+    if new_state not in current_states:
         raise ValueError(
-            f"Expected a state in the set of states {possible_states}. "
-            f"Got {state}."
+            f"Expected a state in the set of states {current_states}. "
+            f"Got {new_state}."
         )

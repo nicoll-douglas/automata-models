@@ -25,8 +25,6 @@ class TransitionTable(dict):
         pre_value_discard: OnValueMutateHook | None = None,
         post_value_add: OnValueMutateHook | None = None,
         post_value_discard: OnValueMutateHook | None = None,
-        /,
-        **kwargs
     ):
         """Initialise the transition table with the given states, 
         alphabet, and data.
@@ -52,11 +50,9 @@ class TransitionTable(dict):
         self._post_value_discard = post_value_discard
 
         if data is not None:
-            self.update(data)
+            for key, value in data.items():
+                self[key] = value
         
-        if kwargs:
-            self.update(kwargs)
-
     @override
     def __getitem__(self, key: Key) -> Value:
         return super().__getitem__(key)
