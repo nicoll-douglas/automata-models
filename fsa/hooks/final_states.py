@@ -7,6 +7,6 @@ def pre_add(
 ) -> None:
     if new_final_state not in current_states:
         raise ValueError(
-            "Expected a state in the set of possible states "
+            "Expected a state in the set of states "
             f"{current_states}. Got {new_final_state}."
         )

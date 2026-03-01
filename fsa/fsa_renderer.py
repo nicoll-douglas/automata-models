@@ -1,17 +1,24 @@
 from __future__ import annotations
 from graphviz import Digraph
+from collections import defaultdict
 from .word import EPSILON
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .fsa import FSA
+    from .state import State
 
 class FSARenderer:
     """Represents a renderer object that can render FSA diagrams."""
 
     # the label used for epsilon-transitions
     EPSILON_LABEL: str = "\u03b5"
+
+    combine_edges: bool
+
+    def __init__(self, combine_edges: bool = True):
+        self.combine_edges = combine_edges
 
     def render(self, fsa: FSA, filename: str, open_file: bool = True) -> None:
         """Create an image representation of the given FSA and optionally 
@@ -27,13 +34,16 @@ class FSARenderer:
         graph.attr(rankdir="LR")
 
         for state in fsa.states:
-            shape: str = (
+            graph.node(state.label, shape=(
                 "doublecircle" 
                 if state in fsa.final_states 
                 else "circle"
-            )
+            ))
 
-            graph.node(state.label, shape=shape)
+        state_pairs: defaultdict[
+            tuple[State, State], 
+            set[str]
+        ] = defaultdict(set)
 
         for (start_state, label), end_states in (
             fsa.transition_table.items()
@@ -43,12 +53,23 @@ class FSARenderer:
                 if label == EPSILON 
                 else label
             )
-
-            for end_state in end_states:
+            if self.combine_edges:
+                for end_state in end_states:
+                    state_pairs[(start_state, end_state)].add(diagram_label)
+            else:
+                for end_state in end_states:
+                    graph.edge(
+                        start_state.label, 
+                        end_state.label,
+                        label=diagram_label
+                    )
+        
+        if self.combine_edges:
+            for (start_state, end_state), labels in state_pairs.items():
                 graph.edge(
-                    start_state.label, 
+                    start_state.label,
                     end_state.label,
-                    label=diagram_label
+                    label=", ".join(sorted(list(labels)))
                 )
 
         graph.node("start", label="", shape="none", width="0", height="0")

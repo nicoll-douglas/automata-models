@@ -6,6 +6,17 @@ from .word import EPSILON
 from .transition_table import TransitionTable
 from . import hooks
 from utils import ObservableSet
+from .fsa_type import FSAType
+
+"""
+Algorithms to implement:
+    - [x] Subset construction
+    - [x] Epsilon removal
+    - [ ] Complementation
+    - [ ] Intersection (product automaton)
+    - [ ] Minimisation
+    
+"""
 
 class FSA:
     """Represents a finite-state automaton (FSA) and contains algorithms 
@@ -130,55 +141,33 @@ class FSA:
         self._transition_table = self._transition_table_from_set(value)
     
     @property
-    def is_dfa(self) -> bool:
-        """Return a boolean flag indicating whether the FSA is a 
-        deterministic FSA (DFA) or not."""
-        return all(
-            label != EPSILON
-            and len(self.delta(state, label)) <= 1
-            for state, label in self.transition_table.keys()
-        )
-    
-    @property
-    def is_complete_dfa(self) -> bool:
-        """Return a boolean flag indicating whether the FSA is a 
-        complete DFA.
-
-        A complete DFA must have exactly 1 outgoing transition for 
-        every combination of state and letter.
-        """
-        return self.is_dfa and all(
-            len(self.delta(state, letter)) == 1
-            for letter in self.alphabet
-            for state in self.states
-        )
-
-    @property
-    def is_nfa(self) -> bool:
-        """Return a boolean flag indicating whether the FSA is a 
-        non-deterministic FSA (NFA) or not."""
-        return not self.is_dfa
-
-    @property
-    def is_epsilon_nfa(self) -> bool:
-        """Return a boolean flag indicating whether the FSA is an 
-        epsilon-NFA or not."""
-        return self.is_nfa and any(
+    def type(self) -> FSAType:
+        if any(
             label == EPSILON
-            for _, label in self.transition_table.keys()
-        )
+            and end_states
+            for (_, label), end_states in self.transition_table.items()
+        ): return FSAType.NFA | FSAType.EPSILON_NFA
 
-    @property
-    def type(self) -> str:
-        """Get a string description of the type of the FSA."""
-        if self.is_complete_dfa: return "Complete DFA"
-        if self.is_dfa: return "DFA"
-        if self.is_epsilon_nfa: return "Epsilon-NFA"
+        type: FSAType = FSAType.DFA | FSAType.COMPLETE_DFA
 
-        return "NFA"
+        for state in self.states:
+            for letter in self.alphabet:
+                next_state_count: int = len(self.delta(state, letter))
 
-    def delta(self, state: State, label: str) -> frozenset[State]:        
-        return frozenset(self.transition_table[(state, label)])
+                if next_state_count > 1:
+                    return FSAType.NFA
+                
+                if next_state_count == 0:
+                    type = FSAType.DFA
+        
+        return type
+ 
+    def delta(self, states: State | AbstractSet[State], label: str) -> frozenset[State]:    
+        return frozenset({
+            end_state
+            for state in ({states} if isinstance(states, State) else states)
+            for end_state in self.transition_table[(state, label)]
+        })
 
     def accepts(self, word: str) -> bool:
         """Return True if the FSA accepts the given word otherwise 
@@ -222,18 +211,17 @@ class FSA:
         nfa: FSA = FSA(
             initial_state=self.initial_state,
             states={self.initial_state},
-            alphabet=set(self.alphabet)
+            alphabet=self.alphabet
         )
 
         e_closures: dict[State, frozenset[State]] = {
-            state: self.epsilon_closure({state})
+            state: self.epsilon_closure(state)
             for state in self.states
         }
 
         # step 2: iterate over the states
         for state in self.states:
-            # step 2.1: get the epsilon closure of the state
-            state_e_closure: frozenset[State] = e_closures[state]
+            nfa.states.add(state)
 
             # step 3: iterate over the states and alphabet
             for letter in self.alphabet:
@@ -241,24 +229,22 @@ class FSA:
                 # transition table
                 # formula: 
                 # d'(state, letter) = ECLOSE(d(ECLOSE(state), letter))
-                end_states: set[State] = {
-                    destination
-                    for closure_state in state_e_closure
-                    for transition_state in self.delta(closure_state, letter)
-                    for destination in e_closures[transition_state]
-                }
+                end_states: frozenset[State] = self.epsilon_closure(
+                    self.delta(e_closures[state], letter)
+                )
 
                 if end_states:
+                    nfa.states |= end_states
                     nfa.transition_table[(state, letter)] = end_states
 
             if any(
                 closure_state in self.final_states 
-                for closure_state in state_e_closure
+                for closure_state in e_closures[state]
             ): nfa.final_states.add(state)
         
         return nfa
         
-    def epsilon_closure(self, states: AbstractSet[State]) -> frozenset[State]:
+    def epsilon_closure(self, states: AbstractSet[State] | State) -> frozenset[State]:
         """Get the epsilon-closure of a set of states in the FSA.
 
         Args:
@@ -271,8 +257,13 @@ class FSA:
             from the given states. At minimum this will be a set states 
             including all the given states.
         """
-        closure: set[State] = set(states)
-        queue: deque[State] = deque(states)
+        normalised_states: set[State] = (
+            {states}
+            if isinstance(states, State)
+            else set(states)
+        )
+        closure: set[State] = normalised_states
+        queue: deque[State] = deque(normalised_states)
 
         while queue:
             current_state: State = queue.popleft()
@@ -285,7 +276,7 @@ class FSA:
 
         return frozenset(closure)
     
-    def subset_construction(self) -> FSA:
+    def subset_construction(self, complete: bool = True) -> FSA:
         """Construct an equivalent deterministic FSA from the current 
         FSA via the subset construction algorithm.
 
@@ -324,28 +315,27 @@ class FSA:
                 # step 2.1: find all reachable states in the NFA from 
                 # the set of NFA states in the current DFA states;
                 # this becomes the next DFA state
-                # union of epsilon closures of the delta
-                next_dfa_state: frozenset[State] = frozenset({
-                    state
-                    for start_nfa_state in current_dfa_state
-                    for state in self.epsilon_closure(
-                        self.delta(start_nfa_state, letter)
-                    )
-                })
+                # formula: δ'(Q, a) = (∪ q∈Q) E(δ(q, a))
+                next_dfa_state: frozenset[State] = self.epsilon_closure(
+                    self.delta(current_dfa_state, letter)
+                )
 
-                # step 2.2: put the transition in the transition table
-                # if nothing is reachable, then we will point the 
-                # transition to the dummy state (represented by the 
-                # empty set here)
+                if not complete and not next_dfa_state: continue
+
                 if next_dfa_state not in seen_states:
                     seen_states[next_dfa_state] = State(next_dfa_state)
                     dfa.states.add(seen_states[next_dfa_state])
+
+                    # step 2.2: add the state to the queue if undiscovered
                     discovered_states.append(next_dfa_state)
 
+                # step 2.3: add the transition to the transition table
                 dfa.transition_table[
                     (seen_states[current_dfa_state], letter)
                 ] = {seen_states[next_dfa_state]}
 
+        # step 3: identify the final states;
+        # the final states are any DFA state which contains an NFA final state
         dfa.final_states = {
             dfa_state
             for nfa_states, dfa_state in seen_states.items()
@@ -365,7 +355,7 @@ class FSA:
         Raises:
             ValueError: If the given FSA is not a DFA.
         """
-        if not dfa.is_dfa:
+        if not FSAType.DFA in dfa.type:
             raise ValueError(
                 f"Expected a DFA. Got an FSA of type '{dfa.type}'."
             )

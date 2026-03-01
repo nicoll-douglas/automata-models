@@ -1,5 +1,5 @@
 from collections.abc import MutableSet
-from typing import override, Iterable, Iterator, Callable, TypeVar
+from typing import override, Iterable, Iterator, Callable
 
 class ObservableSet[T](MutableSet[T]):
     """Abstract base class representing a set that validates items 
