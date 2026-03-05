@@ -1,13 +1,13 @@
-from ..word import EPSILON
+from ..constants import EPSILON
 from typing import AbstractSet, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..transition_table import TransitionTable
-    from ..state import State
+    from ..models.transition_table import _TransitionTable
+    from ..models.state import State
 
 # hook function to run before an item is set in the transition table of an FSA
 def pre_setitem(
-    key: TransitionTable.Key,
+    key: _TransitionTable.Key,
     value: AbstractSet[State],
     current_states: AbstractSet[State],
     current_alphabet: AbstractSet[str]

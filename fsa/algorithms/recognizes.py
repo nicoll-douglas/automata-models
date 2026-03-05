@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from .accepts import accepts
 
 if TYPE_CHECKING:
-    from ..state import State
-    from ..fsa import FSA
+    from ..models.state import State
+    from ..models.fsa import FSA
 
 def _recognizes_empty_language(fsa: FSA) -> bool:
     """Return True if the given FSA recognzies the empty language (a set 
@@ -33,6 +33,6 @@ def _recognizes_empty_language(fsa: FSA) -> bool:
 def recognizes(fsa: FSA, language: set[str]) -> bool:
     """Return True if the given FSA recognizes the given language, 
     otherwise False."""
-    if not language: return _recognizes_empty_language()
+    if not language: return _recognizes_empty_language(fsa)
 
     return all(accepts(fsa, word) for word in language)

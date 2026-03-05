@@ -1,8 +1,8 @@
-from ..fsa import FSA
+from ..models.fsa import FSA
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..state import State
+    from ..models.state import State
 
 def epsilon_remove(fsa: FSA) -> FSA:
     """Create and return an FSA free of epsilon-transitions using the 
@@ -18,7 +18,7 @@ def epsilon_remove(fsa: FSA) -> FSA:
         alphabet=fsa.alphabet
     )
 
-    e_closures: dict[State, frozenset[State]] = {
+    e_closures: dict[State, set[State]] = {
         state: fsa.epsilon_closure(state)
         for state in fsa.states
     }
@@ -30,7 +30,7 @@ def epsilon_remove(fsa: FSA) -> FSA:
         # step 2: iterate over the alphabet
         for symbol in fsa.alphabet:
             # step 2.1: use the formula for δ': δ'(q, a) = E(δ(E(q), a))
-            next_states: frozenset[State] = fsa.epsilon_closure(
+            next_states: set[State] = fsa.epsilon_closure(
                 fsa.delta(e_closures[state], symbol)
             )
 

@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
-from ..fsa_type import FSAType
+from ..models.fsa_type import FSAType
 from .subset_construction import subset_construction
 
 if TYPE_CHECKING:
-    from ..fsa import FSA
-    from ..state import State
+    from ..models.fsa import FSA
+    from ..models.state import State
 
 def _dfa_accepts(dfa: FSA, word: str) -> bool:
     """Return True if the given DFA accepts the given word, 
@@ -22,14 +22,14 @@ def _dfa_accepts(dfa: FSA, word: str) -> bool:
     current_state: State = dfa.initial_state
 
     for symbol in word:
-        next_states: frozenset[State] = dfa.delta(current_state, symbol)
+        next_states: set[State] = dfa.delta(current_state, symbol)
 
         # no next state so we hit a dead-end which means the word 
         # is not accepted
         if not next_states: return False
 
         # since we are traversing a DFA the set only has one state
-        (current_state, ) = next_states
+        current_state = next_states.pop()
 
     return current_state in dfa.final_states
 

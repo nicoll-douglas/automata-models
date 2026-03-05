@@ -76,8 +76,19 @@ class ObservableSet[T](MutableSet[T]):
     @override
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._data})"
-    
-    @override
+
+    @override        
     def __sub__(self, other: Iterable[T]) -> set[T]:
-        return {item for item in self if item not in other}
-        
+        return self._data - set(other)
+
+    @override
+    def __or__(self, other: Iterable[T]) -> set[T]:
+        return self._data | set(other)
+
+    @override
+    def __and__(self, other: Iterable[T]) -> set[T]:
+        return self._data & set(other)
+
+    @override
+    def __xor__(self, other: Iterable[T]) -> set[T]:
+        return self._data ^ set(other)

@@ -1,7 +1,7 @@
 from typing import AbstractSet, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..state import State
+    from ..models.state import State
 
 # hook function run before a final state is added to the set of final states 
 # of an FSA

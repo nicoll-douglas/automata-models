@@ -2,9 +2,9 @@ from __future__ import annotations
 from collections import deque, defaultdict
 from typing import AbstractSet
 from .state import State
-from .word import EPSILON
-from .transition_table import TransitionTable
-from . import hooks
+from ..constants import EPSILON
+from .transition_table import _TransitionTable
+from .. import _hooks
 from lib import ObservableSet
 from .fsa_type import FSAType
 
@@ -19,7 +19,7 @@ class FSA:
     # the final states of the FSA
     _final_states: ObservableSet[State]
     # the transition table of the FSA
-    _transition_table: TransitionTable
+    _transition_table: _TransitionTable
     # the alphabet of the FSA
     _alphabet: ObservableSet[str]
 
@@ -51,7 +51,7 @@ class FSA:
         set of states are removed and any transitions involving states 
         not in the new set of states are also removed.
         """
-        hooks.states.pre_set(
+        _hooks.states.pre_set(
             new_states=value,
             current_initial_state=self.initial_state
         )
@@ -76,7 +76,7 @@ class FSA:
         The new state is validated to make sure it is a state in 
         the current set of states.
         """
-        hooks.initial_state.pre_set(
+        _hooks.initial_state.pre_set(
             new_initial_state=value,
             current_states=self.states
         )
@@ -109,13 +109,13 @@ class FSA:
         """
         self._alphabet = self._alphabet_from_set(value)
 
-        hooks.alphabet.post_set(
+        _hooks.alphabet.post_set(
             new_alphabet=value,
             current_transition_table=self.transition_table
         )
  
     @property
-    def transition_table(self) -> TransitionTable:
+    def transition_table(self) -> _TransitionTable:
         return self._transition_table
     
     @transition_table.setter
@@ -138,6 +138,7 @@ class FSA:
         If FSAType.EPSILON_NFA is set then FSAType.NFA is also 
         set. FSAType.NFA and FSAType.DFA are mutually exclusive.
         """
+        # ideal scenario, complete and DFA
         type: FSAType = FSAType.DFA | FSAType.COMPLETE
 
         if any(
@@ -163,7 +164,7 @@ class FSA:
         self, 
         state: State | AbstractSet[State], 
         symbol: str
-    ) -> frozenset[State]:    
+    ) -> set[State]:    
         """Get the set of next states for a state and symbol in the 
         transition table.
 
@@ -174,11 +175,11 @@ class FSA:
             {state} if isinstance(state, State) else state
         )
 
-        return frozenset({
+        return {
             next_state
             for start_state in normalised_states
             for next_state in self.transition_table[(start_state, symbol)]
-        })
+        }
     
     def copy(self) -> FSA:
         """Create a copy of the FSA."""
@@ -193,7 +194,7 @@ class FSA:
     def epsilon_closure(
         self, 
         states: AbstractSet[State] | State
-    ) -> frozenset[State]:
+    ) -> set[State]:
         """Get the epsilon-closure of a state(s) in the FSA.
 
         Args:
@@ -216,14 +217,14 @@ class FSA:
 
         while queue:
             current_state: State = queue.popleft()
-            next_states: frozenset[State] = self.delta(current_state, EPSILON)
+            next_states: set[State] = self.delta(current_state, EPSILON)
 
             for state in next_states:
                 if state not in closure:
                     closure.add(state)
                     queue.append(state)
 
-        return frozenset(closure)
+        return closure
         
     def _states_from_set(
         self, 
@@ -233,16 +234,16 @@ class FSA:
         set of states."""
         return ObservableSet[State](
             states,
-            pre_add=lambda state: hooks.states.pre_add(
+            pre_add=lambda state: _hooks.states.pre_add(
                 new_state=state,
                 current_states=self.states
             ),
-            post_discard=lambda state: hooks.states.post_discard(
+            post_discard=lambda state: _hooks.states.post_discard(
                 state=state,
                 current_final_states=self.final_states,
                 current_transition_table=self.transition_table
             ),
-            pre_discard=lambda state: hooks.states.pre_discard(
+            pre_discard=lambda state: _hooks.states.pre_discard(
                 state=state,
                 current_initial_state=self.initial_state,
             )
@@ -256,7 +257,7 @@ class FSA:
         of final states."""
         return ObservableSet[State](
             final_states,
-            pre_add=lambda state: hooks.final_states.pre_add(
+            pre_add=lambda state: _hooks.final_states.pre_add(
                 new_final_state=state,
                 current_states=self.states
             )
@@ -269,8 +270,8 @@ class FSA:
         """Create an alphabet for the class from the given set of symbols."""
         return ObservableSet[str](
             alphabet,
-            pre_add=lambda symbol: hooks.alphabet.pre_add(symbol),
-            post_discard=lambda symbol: hooks.alphabet.post_discard(
+            pre_add=lambda symbol: _hooks.alphabet.pre_add(symbol),
+            post_discard=lambda symbol: _hooks.alphabet.post_discard(
                 symbol=symbol, 
                 current_transition_table=self.transition_table
             ),
@@ -279,7 +280,7 @@ class FSA:
     def _transition_table_from_set(
         self,
         transitions: AbstractSet[tuple[State, str, State]] | None = None
-    ) -> TransitionTable:
+    ) -> _TransitionTable:
         """Create a transition table for the class from the given set of 
         transitions.
         
@@ -297,17 +298,17 @@ class FSA:
         else: 
             transition_data = None
 
-        return TransitionTable(
+        return _TransitionTable(
             transition_data,
             pre_setitem=(
-                lambda key, value: hooks.transition_table.pre_setitem(
+                lambda key, value: _hooks.transition_table.pre_setitem(
                     key=key,
                     value=value,
                     current_states=self.states,
                     current_alphabet=self.alphabet
                 )
             ),
-            pre_value_add=lambda state: hooks.transition_table.pre_value_add(
+            pre_value_add=lambda state: _hooks.transition_table.pre_value_add(
                 new_state=state,
                 current_states=self.states
             ),

@@ -1,8 +1,8 @@
-from ..fsa_renderer import FSARenderer
+from ..models.fsa_renderer import FSARenderer
 from typing import AbstractSet, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..transition_table import TransitionTable
+    from ..models.transition_table import _TransitionTable
 
 # hook function to run before a symbol is added to the alphabet of an FSA
 def pre_add(new_symbol: str) -> None:
@@ -23,7 +23,7 @@ def pre_add(new_symbol: str) -> None:
 # hook function to run after a symbol is removed from the alphabet of an FSA
 def post_discard(
     symbol: str, 
-    current_transition_table: TransitionTable
+    current_transition_table: _TransitionTable
 ) -> None:
     """Remove all transitions from the given transition table if they 
     utilise the symbol removed from the alphabet."""
@@ -34,7 +34,7 @@ def post_discard(
 # hook function to run after an alphabet is set for an FSA
 def post_set(
     new_alphabet: AbstractSet[str],
-    current_transition_table: TransitionTable
+    current_transition_table: _TransitionTable
 ) -> None:
     """Remove all transitions from the given transition table if they 
     don't utilise any symbol in the new alphabet."""

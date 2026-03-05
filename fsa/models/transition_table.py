@@ -3,7 +3,7 @@ from .state import State
 from typing import override, Mapping, Callable, AbstractSet
 from lib import ObservableSet
 
-class TransitionTable(dict[tuple[State, str], ObservableSet[State]]):
+class _TransitionTable(dict[tuple[State, str], ObservableSet[State]]):
     """Represents the transition table for an FSA."""
 
     # a key in the transition table (state and symbol)
@@ -90,7 +90,7 @@ class TransitionTable(dict[tuple[State, str], ObservableSet[State]]):
         def _callback(
             start_state: State, 
             symbol: str, 
-            end_states: TransitionTable.Value
+            end_states: _TransitionTable.Value
         ) -> None:
             if match(start_state, symbol, end_states):
                 del self[(start_state, symbol)]
@@ -118,7 +118,7 @@ class TransitionTable(dict[tuple[State, str], ObservableSet[State]]):
         def _add_flattened(
             start_state: State, 
             symbol: str,
-            next_states: TransitionTable.Value
+            next_states: _TransitionTable.Value
         ) -> None:
             for next_state in next_states:
                 flattened_transitions.add((start_state, symbol, next_state))

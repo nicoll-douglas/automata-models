@@ -1,6 +1,6 @@
 from lib import SetMap
-from ..fsa import FSA
-from ..state import State
+from ..models.state import State
+from ..models.fsa import FSA
 from collections import deque
 
 def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
@@ -14,9 +14,7 @@ def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
         An equivalent DFA
     """
     # step 1: get the DFA's initial state (NFA epsilon closure)
-    dfa_initial_state: frozenset[State] = fsa.epsilon_closure(
-        fsa.initial_state
-    )
+    dfa_initial_state: set[State] = fsa.epsilon_closure(fsa.initial_state)
 
     seen_states: SetMap[State, State] = SetMap[State, State](
         [
@@ -32,18 +30,18 @@ def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
 
     # step 2: discover all DFA states and construct the DFA 
     # transition table 
-    discovered_states: deque[frozenset[State]] = deque(
+    discovered_states: deque[set[State]] = deque(
         [dfa_initial_state]
     )
 
     while discovered_states:
-        current_dfa_state: frozenset[State] = discovered_states.popleft()
+        current_dfa_state: set[State] = discovered_states.popleft()
 
         # step 2.1: iterate over the alphabet
         for symbol in fsa.alphabet:
             # step 2.2: find the next DFA state using the formula:
             # δ'(Q, a) = E((∪ q∈Q) δ(q, a))
-            next_dfa_state: frozenset[State] = fsa.epsilon_closure(
+            next_dfa_state: set[State] = fsa.epsilon_closure(
                 fsa.delta(current_dfa_state, symbol)
             )
 

@@ -1,8 +1,8 @@
-from ..state import State
+from ..models.state import State
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..fsa import FSA
+    from ..models.fsa import FSA
 
 def complete(fsa: FSA) -> FSA:
     """Create and return a complete version of the FSA.

@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING
 from .subset_construction import subset_construction
 
 if TYPE_CHECKING:
-    from ..fsa import FSA
-    from ..state import State
+    from ..models.fsa import FSA
+    from ..models.state import State
 
 def complement(fsa: FSA) -> FSA:
     """Create and return the complement automaton of the given FSA."""

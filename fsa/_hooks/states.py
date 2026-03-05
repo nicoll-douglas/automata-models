@@ -1,8 +1,8 @@
 from typing import AbstractSet, MutableSet, TYPE_CHECKING
-from ..state import State
+from ..models.state import State
 
 if TYPE_CHECKING:
-    from ..transition_table import TransitionTable
+    from ..models.transition_table import _TransitionTable
 
 # hook function to run before a new state is added to the set of states of 
 # an FSA
@@ -36,7 +36,7 @@ def pre_discard(
 def post_discard(
     state: State,
     current_final_states: MutableSet[State],
-    current_transition_table: TransitionTable
+    current_transition_table: _TransitionTable
 ) -> None:
     """Remove the state from the given set of final states (if final) and 
     remove all transitions from the given transition table that involve the 

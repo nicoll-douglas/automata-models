@@ -1,13 +1,13 @@
 from graphviz import Digraph
 from collections import defaultdict
-from .word import EPSILON
+from ..constants import EPSILON
 from typing import TYPE_CHECKING, AbstractSet
 from os import PathLike
 
 if TYPE_CHECKING:
     from .fsa import FSA
     from .state import State
-    from .transition_table import TransitionTable
+    from .transition_table import _TransitionTable
     
 class FSARenderer:
     """Represents a renderer object that can render FSA diagrams."""
@@ -93,14 +93,14 @@ class FSARenderer:
     def _insert_edges(
         cls,
         graph: Digraph, 
-        transition_table: TransitionTable
+        transition_table: _TransitionTable
     ) -> None:
         """Insert edges into the given graph based on the given FSA 
         transition table."""
         def _insert(
             start_state: State,
             symbol: str,
-            next_states: TransitionTable.Value
+            next_states: _TransitionTable.Value
         ) -> None:
             for next_state in next_states:
                 graph.edge(
@@ -115,7 +115,7 @@ class FSARenderer:
     def _insert_combined_edges(
         cls,
         graph: Digraph, 
-        transition_table: TransitionTable
+        transition_table: _TransitionTable
     ) -> None:
         """Insert edges with combined transitions into the given graph for 
         the given FSA transition table."""
@@ -127,7 +127,7 @@ class FSARenderer:
         def _get_combined_transition_labels(
             start_state: State, 
             symbol: str, 
-            next_states: TransitionTable.Value
+            next_states: _TransitionTable.Value
         ) -> None:
             for next_state in next_states:
                 transition_labels[(start_state, next_state)].add(

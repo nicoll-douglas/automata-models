@@ -1,7 +1,8 @@
-from ..fsa import FSA
+from ..models.fsa import FSA
+from ..models.state import State
 from typing import Literal
-from ..state import State
 from collections import deque
+from .epsilon_remove import epsilon_remove
 
 def product(
     a: FSA, 
@@ -16,19 +17,21 @@ def product(
     """Create and return the product FSA with another FSA.
     
     Args:
-        other: The other FSA to create a product from.
+        a: The first FSA.
+        b: The second FSA.
         acceptance: The strategy for computing final states. For 
         intersection a product state is final if both states were 
         original final states. For union, 1 or more. For difference 
-        the state taken from self must be final but not the state 
-        taken from other. For xor, 1 or the other.
+        the state taken from 'a' must be final but not the state 
+        taken from 'b'. For xor, 1 or the other.
     
     Returns:
         The product FSA.
     """
-    a = a.epsilon_removal()
-    b = b.epsilon_removal()
+    a = epsilon_remove(a)
+    b = epsilon_remove(b)
 
+    # a map of tuples to actual state objects in the product FSA
     product_states: dict[tuple[State, State], State] = {
         (a_state, b_state): State((a_state, b_state))
         for a_state in a.states
@@ -52,10 +55,12 @@ def product(
         product_initial_state
     ])
 
+    common_symbols: set[str] = a.alphabet & b.alphabet
+
     while discovered:
         current: tuple[State, State] = discovered.popleft()
 
-        for symbol in a.alphabet & b.alphabet:
+        for symbol in common_symbols:
             a_state: State
             b_state: State
             a_state, b_state = current

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, AbstractSet
 
 if TYPE_CHECKING:
-    from ..state import State
+    from ..models.state import State
 
 # hook function to run before the initial state of an FSA is set
 def pre_set(

@@ -1,10 +1,10 @@
-from ..utils import states
-from ..fsa import FSA
-from ..word import EPSILON
+from ..utils.states import states
+from ..models.fsa import FSA
+from ..constants import EPSILON
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..state import State
+    from ..models.state import State
 
 q: list[State] = states(3)
 epsilon_nfa: FSA = FSA(
