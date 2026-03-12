@@ -11,7 +11,7 @@ def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
         complete: Whether the resulting DFA should be a complete DFA.
 
     Returns:
-        An equivalent DFA
+        An equivalent DFA.
     """
     # step 1: get the DFA's initial state (NFA epsilon closure)
     dfa_initial_state: set[State] = fsa.epsilon_closure(fsa.initial_state)

@@ -14,7 +14,7 @@ def epsilon_remove(fsa: FSA) -> FSA:
     """
     nfa: FSA = FSA(
         initial_state=fsa.initial_state,
-        states={fsa.initial_state},
+        states=fsa.states,
         alphabet=fsa.alphabet
     )
 
@@ -25,8 +25,6 @@ def epsilon_remove(fsa: FSA) -> FSA:
 
     # step 1: iterate over the states
     for state in fsa.states:
-        nfa.states.add(state)
-
         # step 2: iterate over the alphabet
         for symbol in fsa.alphabet:
             # step 2.1: use the formula for δ': δ'(q, a) = E(δ(E(q), a))
@@ -35,7 +33,6 @@ def epsilon_remove(fsa: FSA) -> FSA:
             )
 
             if next_states:
-                nfa.states |= next_states
                 nfa.transition_table[(state, symbol)] = next_states
 
         # step 3: identify the final states such that: E(q) ∩ F != Ø
