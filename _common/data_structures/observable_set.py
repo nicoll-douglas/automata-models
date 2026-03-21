@@ -6,27 +6,24 @@ from typing import override, Iterable, Iterator, Callable
 class ObservableSet[T](MutableSet[T]):
     """Class that implements set observability using pre and post mutation hooks."""
 
-    # a hook function
-    type Hook[U] = Callable[[U], None]
-
     # the underlying set data
     _data: set[T]
     # hook function to run before an item is added to the set
-    _pre_add: Hook[T] | None
+    _pre_add: Callable[[T], None] | None
     # hook function to run after an item is added to the set
-    _post_add: Hook[T] | None
+    _post_add: Callable[[T], None] | None
     # hook function to run before an item is discarded from the set
-    _pre_discard: Hook[T] | None
+    _pre_discard: Callable[[T], None] | None
     # hook function to run after an item is discarded from the set
-    _post_discard: Hook[T] | None
+    _post_discard: Callable[[T], None] | None
 
     def __init__(
         self,
         iterable: Iterable[T] | None = None,
-        pre_add: Hook[T] | None = None,
-        post_add: Hook[T] | None = None,
-        pre_discard: Hook[T] | None = None,
-        post_discard: Hook[T] | None = None,
+        pre_add: Callable[[T], None] | None = None,
+        post_add: Callable[[T], None] | None = None,
+        pre_discard: Callable[[T], None] | None = None,
+        post_discard: Callable[[T], None] | None = None,
     ):
         self._data = set()
         self._pre_add = pre_add

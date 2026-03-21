@@ -6,29 +6,24 @@ from collections.abc import MutableMapping
 class ObservableMapping[K, V](MutableMapping[K, V]):
     """Class that implements mapping observability using pre and post mutation hooks."""
 
-    # a key-value hook function
-    type OnItemHook[T, U] = Callable[[T, U], None]
-    # a key-only hook function
-    type OnKeyHook[T] = Callable[[T], None]
-
+    # the underlying data of the mapping
     _data: dict[K, V]
-
     # hook function to run before an item is set in the dictionary
-    _pre_setitem: OnItemHook | None
+    _pre_setitem: Callable[[K, V], None] | None
     # hook function to run after an item is set in the dictionary
-    _post_setitem: OnItemHook | None
+    _post_setitem: Callable[[K, V], None] | None
     # hook function to run before an item is deleted from the dictionary
-    _pre_delitem: OnKeyHook | None
+    _pre_delitem: Callable[[K], None] | None
     # hook function to run after an item is set in the dictionary
-    _post_delitem: OnKeyHook | None
+    _post_delitem: Callable[[K], None] | None
 
     def __init__(
         self,
         mapping: Mapping[K, V] | None = None,
-        pre_setitem: OnItemHook[K, V] | None = None,
-        post_setitem: OnItemHook[K, V] | None = None,
-        pre_delitem: OnKeyHook[K] | None = None,
-        post_delitem: OnKeyHook[K] | None = None,
+        pre_setitem: Callable[[K, V], None] | None = None,
+        post_setitem: Callable[[K, V], None] | None = None,
+        pre_delitem: Callable[[K], None] | None = None,
+        post_delitem: Callable[[K], None] | None = None,
         /,
         **kwargs,
     ):
