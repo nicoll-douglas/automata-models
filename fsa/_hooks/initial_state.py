@@ -1,14 +1,17 @@
 from typing import TYPE_CHECKING, AbstractSet
+from .states import states_contains
 
 if TYPE_CHECKING:
     from ..models.state import State
 
 
-# hook function to run before the initial state of an FSA is set
-def pre_set(new_initial_state: State, current_states: AbstractSet[State]) -> None:
-    """Validate that the new initial state is in the current set of states."""
-    if new_initial_state not in current_states:
-        raise ValueError(
-            f"Expected a state in the set of states {current_states}. "
-            f"Got {new_initial_state}."
-        )
+def pre_set(initial_state: State, states: AbstractSet[State]) -> None:
+    """Validate that the given initial state is in the given set of states.
+
+    This hook is intended to run before the given initial state is set for an FSA.
+
+    Args:
+        initial_state: The new initial state being set for the FSA.
+        states: The current set of states of an FSA.
+    """
+    states_contains(states, initial_state)

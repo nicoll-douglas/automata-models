@@ -3,14 +3,14 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..models.transition_table import TransitionTable
-    from models.symbol import Symbol
-    from models.alphabet import Alphabet
+    from language.models.symbol import Symbol
+    from language.models.alphabet import Alphabet
 
 
 def post_discard(symbol: Symbol, transition_table: TransitionTable) -> None:
     """Remove transitions from the given transition table if they utilise the given symbol.
 
-    This hook is intended to run after the symbol is discarded from an FSA's alphabet.
+    This hook is intended to run after the given symbol is discarded from an FSA's alphabet.
 
     Args:
         symbol: The symbol discarded from the FSA's alphabet.
@@ -22,7 +22,7 @@ def post_discard(symbol: Symbol, transition_table: TransitionTable) -> None:
 def post_set(alphabet: Alphabet, transition_table: TransitionTable) -> None:
     """Remove transitions from the given transition table that utilise any symbol not in the given alphabet.
 
-    This hook is intended to run after the alphabet is set for an FSA.
+    This hook is intended to run after the given alphabet is set for an FSA.
 
     Args:
         alphabet: An alphabet set for an FSA.

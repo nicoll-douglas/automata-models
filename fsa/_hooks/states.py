@@ -1,61 +1,102 @@
 from typing import AbstractSet, MutableSet, TYPE_CHECKING
-from ..models.state import State
 
 if TYPE_CHECKING:
-    from ..models.transition_table import _TransitionTable
+    from ..models.transition_table import TransitionTable
+    from ..models.state import State
 
 
-# hook function to run before a new state is added to the set of states of
-# an FSA
-def pre_add(new_state: State, current_states: AbstractSet[State]) -> None:
-    """Validate that the new state being added has a unique label amongst
-    the given set of states."""
-    if not State.label_is_unique(new_state, current_states):
+def states_contains(states: AbstractSet[State], state: State) -> None:
+    """Validate that the given state is in the given set of states of an FSA.
+
+    Args:
+        states: The set of states of an FSA.
+        state: A state to test.
+
+    Raises:
+        ValueError: On failed validation.
+    """
+    if state not in states:
         raise ValueError(
-            f"Expected a state with a unique label amongst {current_states}."
-            f" Got duplicate label '{new_state.label}'."
+            f"Expected a state in the set of states {states}. Got {state!r}."
         )
 
 
-# hook function to run before a state is discarded from the set of states
-# of an FSA
 def pre_discard(
     state: State,
-    current_initial_state: State,
+    initial_state: State,
 ) -> None:
-    """Validate that the state being removed is not the given initial
-    state."""
-    if state == current_initial_state:
-        raise ValueError(f"Expected a non-initial state. Got initial state {state}.")
+    """Validate that 'state' is not equivalent to 'initial_state', the initial state of an FSA.
+
+    This hook is intended to run before 'state' is discarded from the set of states of an FSA.
+
+    Args:
+        state: A state being discarded from an FSA's set of states.
+        initial_state: The initial state of the FSA.
+
+    Raises:
+        ValueError: On failed validation.
+    """
+    if state == initial_state:
+        raise ValueError(f"Expected a non-initial state. Got initial state {state!r}.")
 
 
-# hook function to run after a state is discarded from the set of states
-# of an FSA
 def post_discard(
     state: State,
-    current_final_states: MutableSet[State],
-    current_transition_table: _TransitionTable,
+    final_states: MutableSet[State],
+    transition_table: TransitionTable,
 ) -> None:
-    """Remove the state from the given set of final states (if final) and
-    remove all transitions from the given transition table that involve the
-    state."""
-    current_final_states.discard(state)
+    """Remove a state from the given set of final states (if it contains it), and any transitions from the given transition table that utilise the state.
 
-    current_transition_table.remove_such_that(
-        lambda start_state, _, __: start_state == state
-    )
+    This hook is intended to run after the given state is discarded from the set of states of an FSA.
 
-    current_transition_table.for_each(
-        lambda _, __, next_states: next_states.discard(state)
-    )
+    Args:
+        state: A state discarded from the set of states (final and non-final) of an FSA.
+        final_states: The set of final states of the FSA.
+        transition_table: The transition table of the FSA.
+    """
+    final_states.discard(state)
+
+    transition_table.remove_such_that(lambda key, _: key[0] == state)
+
+    for next_states in transition_table.values():
+        next_states.discard(state)
 
 
-# hook function to run before the set of states of an FSA is set
-def pre_set(new_states: AbstractSet[State], current_initial_state: State) -> None:
-    """Validate that set of states being set contains the given initial
-    state."""
-    if current_initial_state not in new_states:
+def pre_set(states: AbstractSet[State], initial_state: State) -> None:
+    """Validate that the given set of states contains the given initial state.
+
+    This hook is intended to run before the given set of states are set for an FSA.
+
+    Args:
+        states: The set of states (final and non-final) being set for an FSA.
+        initial_state: The initial state of the FSA.
+
+    Raises:
+        ValueError: On failed validation.
+    """
+    if initial_state not in states:
         raise ValueError(
-            "Expected a set of states containing the initial state "
-            f"{current_initial_state}. Got {new_states}."
+            f"Expected a set of states containing the initial state {initial_state!r}. Got {states}."
         )
+
+
+def post_set(
+    states: AbstractSet[State],
+    final_states: MutableSet[State],
+    transition_table: TransitionTable,
+) -> None:
+    """Remove any states from the given set of final states that are not in the given set of states, and remove any transitions from the given transitition table that utilise a state not in the given set of states.
+
+    This hooks is intended to run after the given set of states of an FSA is set.
+
+    Args:
+        states: The new set of states (final and non-final) set for an FSA.
+        final_states: The current set of final states of the FSA.
+        transition_table: The current transition table of the FSA.
+    """
+    final_states -= final_states - states
+
+    transition_table.remove_such_that(lambda key, _: key[0] not in states)
+
+    for next_states in transition_table.values():
+        next_states -= next_states - states
