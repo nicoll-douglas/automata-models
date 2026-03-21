@@ -1,0 +1,88 @@
+from __future__ import annotations
+from typing import override, Callable, Mapping
+from collections.abc import MutableMapping
+
+
+class ObservableMapping[K, V](MutableMapping[K, V]):
+    """Class that implements mapping observability using pre and post mutation hooks."""
+
+    # a key-value hook function
+    type OnItemHook[T, U] = Callable[[T, U], None]
+    # a key-only hook function
+    type OnKeyHook[T] = Callable[[T], None]
+
+    _data: dict[K, V]
+
+    # hook function to run before an item is set in the dictionary
+    _pre_setitem: OnItemHook | None
+    # hook function to run after an item is set in the dictionary
+    _post_setitem: OnItemHook | None
+    # hook function to run before an item is deleted from the dictionary
+    _pre_delitem: OnKeyHook | None
+    # hook function to run after an item is set in the dictionary
+    _post_delitem: OnKeyHook | None
+
+    def __init__(
+        self,
+        mapping: Mapping[K, V] | None = None,
+        pre_setitem: OnItemHook[K, V] | None = None,
+        post_setitem: OnItemHook[K, V] | None = None,
+        pre_delitem: OnKeyHook[K] | None = None,
+        post_delitem: OnKeyHook[K] | None = None,
+        /,
+        **kwargs,
+    ):
+        self._data = {}
+        self._pre_setitem = pre_setitem
+        self._post_setitem = post_setitem
+        self._pre_delitem = pre_delitem
+        self._post_delitem = post_delitem
+
+        if mapping is not None:
+            self.update(dict)
+        if kwargs:
+            self.update(kwargs)
+
+    def __getitem__(self, key):
+        if key in self._data:
+            return self._data[key]
+
+        if hasattr(self.__class__, "__missing__"):
+            return self.__class__.__missing__(self, key)
+
+        raise KeyError(key)
+
+    def __setitem__(self, key: K, value: V) -> None:
+        """Set an item in the dictionary, running pre and post-setitem hooks."""
+        if self._pre_setitem is not None:
+            self._pre_setitem(key, value)
+
+        self._data[key] = value
+
+        if self._post_setitem is not None:
+            self._post_setitem(key, value)
+
+    def __delitem__(self, key: K) -> None:
+        """Delete an item in the dictionary, running pre and post-delitem hooks."""
+        if self._pre_delitem is not None:
+            self._pre_delitem(key)
+
+        del self._data[key]
+
+        if self._post_delitem is not None:
+            self._post_delitem(key)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    @override
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._data})"
+
+    # override to avoid parent class using our __getitem__ implementation
+    @override
+    def __contains__(self, key: object) -> bool:
+        return key in self._data
