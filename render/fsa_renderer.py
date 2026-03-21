@@ -1,29 +1,29 @@
 from graphviz import Digraph
 from collections import defaultdict
-from ..constants import EPSILON
 from typing import TYPE_CHECKING, AbstractSet
 from os import PathLike
+from .constants import _DEFAULT_RENDER_DIR, _GREEK_SMALL_LETTER_EPSILON
+from language.models.word import Word
+from language.models.symbol import Symbol
 
 if TYPE_CHECKING:
-    from .fsa import FSA
-    from .state import State
-    from .transition_table import _TransitionTable
+    from fsa.models.fsa import FSA
+    from fsa.models.state import State
+    from fsa.models.transition_table import TransitionTable
 
 
 class FSARenderer:
     """Represents a renderer object that can render FSA diagrams."""
 
-    # the label used for epsilon-transitions
-    EPSILON_LABEL: str = "\u03b5"
-
-    # whether to combine multiple transitions between two states into
-    # one edge
+    # whether to combine multiple transitions between two states into one edge
     combine_edges: bool
     # the output directory where rendered images should go
-    directory: PathLike | str | None
+    directory: PathLike | str
 
     def __init__(
-        self, combine_edges: bool = True, directory: PathLike | str | None = "diagrams"
+        self,
+        combine_edges: bool = True,
+        directory: PathLike | str = _DEFAULT_RENDER_DIR,
     ):
         self.combine_edges = combine_edges
         self.directory = directory
@@ -54,17 +54,21 @@ class FSARenderer:
         graph.render(filename, directory=self.directory, view=open_file, cleanup=True)
 
     @classmethod
-    def _get_diagram_transition_label(cls, symbol: str) -> str:
-        """Get the label of a transition in the FSA diagram based on the
-        given transition symbol."""
-        return cls.EPSILON_LABEL if symbol == EPSILON else symbol
+    def _transition_label(cls, symbol: Symbol | Word) -> str:
+        """Get the label of a transition in the FSA diagram based on the given transition symbol."""
+        if isinstance(symbol, Word):
+            return _GREEK_SMALL_LETTER_EPSILON
+
+        if symbol.uid == _GREEK_SMALL_LETTER_EPSILON:
+            return f"'{_GREEK_SMALL_LETTER_EPSILON}'"
+
+        return symbol.uid
 
     @staticmethod
     def _insert_initial_state_arrow(graph: Digraph, initial_state: State) -> None:
-        """Insert the arrow that points to the node of the initial state
-        into the given graph."""
+        """Insert the arrow that points to the node of the initial state into the given graph."""
         graph.node("start", label="", shape="none", width="0", height="0")
-        graph.edge("start", initial_state.label)
+        graph.edge("start", initial_state.uid)
 
     @staticmethod
     def _insert_nodes(
@@ -72,50 +76,36 @@ class FSARenderer:
         states: AbstractSet[State],
         final_states: AbstractSet[State],
     ) -> None:
-        """Insert nodes into the graph based on the given states and final
-        states of an FSA."""
+        """Insert nodes into the graph based on the given states and final states of an FSA."""
         for state in states:
             graph.node(
-                state.label,
+                state.uid,
                 shape=("doublecircle" if state in final_states else "circle"),
             )
 
     @classmethod
-    def _insert_edges(cls, graph: Digraph, transition_table: _TransitionTable) -> None:
-        """Insert edges into the given graph based on the given FSA
-        transition table."""
-
-        def _insert(
-            start_state: State, symbol: str, next_states: _TransitionTable.Value
-        ) -> None:
+    def _insert_edges(cls, graph: Digraph, transition_table: TransitionTable) -> None:
+        """Insert edges into the given graph based on the given FSA transition table."""
+        for (start_state, symbol), next_states in transition_table.items():
             for next_state in next_states:
                 graph.edge(
-                    start_state.label,
-                    next_state.label,
-                    label=cls._get_diagram_transition_label(symbol),
+                    start_state.uid,
+                    next_state.uid,
+                    label=cls._transition_label(symbol),
                 )
-
-            transition_table.for_each(_insert)
 
     @classmethod
     def _insert_combined_edges(
-        cls, graph: Digraph, transition_table: _TransitionTable
+        cls, graph: Digraph, transition_table: TransitionTable
     ) -> None:
-        """Insert edges with combined transitions into the given graph for
-        the given FSA transition table."""
+        """Insert edges with combined transitions into the given graph for the given FSA transition table."""
         transition_labels: defaultdict[tuple[State, State], set[str]] = defaultdict(set)
 
-        def _get_combined_transition_labels(
-            start_state: State, symbol: str, next_states: _TransitionTable.Value
-        ) -> None:
+        for (start_state, symbol), next_states in transition_table.items():
             for next_state in next_states:
                 transition_labels[(start_state, next_state)].add(
-                    cls._get_diagram_transition_label(symbol)
+                    cls._transition_label(symbol)
                 )
 
-        transition_table.for_each(_get_combined_transition_labels)
-
         for (start_state, next_state), labels in transition_labels.items():
-            graph.edge(
-                start_state.label, next_state.label, label=", ".join(sorted(labels))
-            )
+            graph.edge(start_state.uid, next_state.uid, label=", ".join(sorted(labels)))

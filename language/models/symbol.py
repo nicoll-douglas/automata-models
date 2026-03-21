@@ -1,5 +1,5 @@
 from __future__ import annotations
-from _common.datastructures import UID
+from _common.data_structures import UID
 
 
 class Symbol(UID[str]):

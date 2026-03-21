@@ -1,120 +1,94 @@
 from __future__ import annotations
 from .state import State
-from typing import override, Mapping, Callable, AbstractSet
-from lib import ObservableSet
+from typing import override, Callable, AbstractSet, Mapping, TYPE_CHECKING
+from _common.data_structures import ObservableMapping, ObservableSet
+from .state import State
+
+if TYPE_CHECKING:
+    from language.models.symbol import Symbol
+    from language.models.word import Word
 
 
-class _TransitionTable(dict[tuple[State, str], ObservableSet[State]]):
+class TransitionTable(
+    ObservableMapping[tuple[State, Symbol | Word], ObservableSet[State]]
+):
     """Represents the transition table for an FSA."""
 
-    # a key in the transition table (state and symbol)
-    type Key = tuple[State, str]
-    # a value in the transition table (set of next states)
+    type Key = tuple[State, Symbol | Word]
     type Value = ObservableSet[State]
-    # a hook function for whenever the table is mutated
-    type OnSetItemHook = Callable[[Key, AbstractSet[State]], None]
-    # a hook function for when a value in a key-value pair is mutated
-    type OnValueMutateHook = ObservableSet.Hook[State]
 
-    # hook function to run before an item is set in the table
-    _pre_setitem: OnSetItemHook | None
     # hook function to run before a state is added to a set of next states
-    _pre_value_add: OnValueMutateHook | None
+    _pre_value_add: Callable[[State], None] | None = None
+    # hook function to run before a state is added to a set of next states
+    _post_value_add: Callable[[State], None] | None = None
     # hook function to run before a state is removed from a set of next states
-    _pre_value_discard: OnValueMutateHook | None
-    # hook function to run after a state is added to a set of next states
-    _post_value_add: OnValueMutateHook | None
-    # hook function to run after a state is removed from a set of next states
-    _post_value_discard: OnValueMutateHook | None
+    _pre_value_discard: Callable[[State], None] | None = None
+    # hook function to run before a state is removed from a set of next states
+    _post_value_discard: Callable[[State], None] | None = None
 
-    def __init__(
-        self,
-        entries: Mapping[Key, AbstractSet[State]] | None = None,
-        pre_setitem: OnSetItemHook | None = None,
-        pre_value_add: OnValueMutateHook | None = None,
-        pre_value_discard: OnValueMutateHook | None = None,
-        post_value_add: OnValueMutateHook | None = None,
-        post_value_discard: OnValueMutateHook | None = None,
-    ):
-        super().__init__()
+    def __init__(self, mapping: Mapping[Key, AbstractSet[State]] | None = None):
+        initial_table: dict[TransitionTable.Key, TransitionTable.Value] | None = None
 
-        self._pre_setitem = pre_setitem
-        self._pre_value_add = pre_value_add
-        self._post_value_add = post_value_add
-        self._pre_value_discard = pre_value_discard
-        self._post_value_discard = post_value_discard
+        if mapping is not None:
+            initial_table = {}
 
-        if entries is not None:
-            for key, value in entries.items():
-                self[key] = value
+            for k, v in mapping.items():
+                initial_table[k] = self._create_observable_value(v)
 
-    @override
-    def __setitem__(self, key: Key, value: AbstractSet[State]) -> None:
-        """Set an item in the transition table, running the pre-set-item hook."""
-        if self._pre_setitem is not None:
-            self._pre_setitem(key, value)
+        super().__init__(initial_table)
 
-        super().__setitem__(
-            key,
+    def _create_observable_value(
+        self, value: AbstractSet[State] | None = None
+    ) -> ObservableSet[State]:
+        """Create an observable set with value-add and value-discard hooks for the given set of states."""
+        # here we use lambdas to create closures and take advantage of late binding instead of passing direct attributes
+        return (
             ObservableSet[State](
                 value,
-                pre_add=self._pre_value_add,
-                post_add=self._post_value_add,
-                pre_discard=self._pre_value_discard,
-                post_discard=self._post_value_discard,
+                pre_add=lambda state: (
+                    None if self._pre_value_add is None else self._pre_value_add(state)
+                ),
+                post_add=lambda state: (
+                    None
+                    if self._post_value_add is None
+                    else self._post_value_add(state)
+                ),
+                pre_discard=lambda state: (
+                    None
+                    if self._pre_value_discard is None
+                    else self._pre_value_discard(state)
+                ),
+                post_discard=lambda state: (
+                    None
+                    if self._post_value_discard is None
+                    else self._post_value_discard(state)
+                ),
             ),
         )
 
-    def __missing__(self, key: Key) -> Value:
-        """Add the key to the table, mapping to an empty observable set."""
-        self[key] = ObservableSet[State](
-            pre_add=self._pre_value_add,
-            post_add=self._post_value_add,
-            pre_discard=self._pre_value_discard,
-            post_discard=self._post_value_discard,
+    @override
+    def __setitem__(self, key: Key, value: AbstractSet[State]) -> None:
+        value_to_set: ObservableSet[State] = (
+            value
+            if isinstance(value, ObservableSet)
+            else self._create_observable_value(value)
         )
 
-        return self[key]
+        super().__setitem__(key, value_to_set)
 
-    def remove_such_that(self, match: Callable[[State, str, Value], bool]) -> None:
-        """Remove items from the transition table based on the given
-        matching function.
+    def __missing__(self, key: Key) -> ObservableSet[State]:
+        """Add the given key to the table, mapping to an empty observable set."""
+        new_value: ObservableSet[State] = self._create_observable_value()
+        self[key] = new_value
 
-        Args:
-            match: A matching function that accepts the start state, symbol
-            and next states of the current item being processed and should
-            return True if the item is to be discarded or False otherwise.
-        """
+        return new_value
 
-        def _callback(
-            start_state: State, symbol: str, end_states: _TransitionTable.Value
-        ) -> None:
-            if match(start_state, symbol, end_states):
-                del self[(start_state, symbol)]
-
-        self.for_each(_callback)
-
-    def for_each(self, callback: Callable[[State, str, Value], None]) -> None:
-        """Run a callback for each item in the transition table.
+    def remove_such_that(self, match: Callable[[Key, Value], bool]) -> None:
+        """Remove items from the transition table based on the given matching function.
 
         Args:
-            callback: A callback that accepts the start state, symbol and
-            next states of the current item being processed.
+            match: A matching function that accepts the key and value of the current item being processed and that should return True if the item is to be discarded or False otherwise.
         """
-        for (start_state, symbol), end_states in list(self.items()):
-            callback(start_state, symbol, end_states)
-
-    def flatten(self) -> set[tuple[State, str, State]]:
-        """Flatten all transitions in the table into a set of 3-tuples
-        (start state, symbol, next state)."""
-        flattened_transitions: set[tuple[State, str, State]] = set()
-
-        def _add_flattened(
-            start_state: State, symbol: str, next_states: _TransitionTable.Value
-        ) -> None:
-            for next_state in next_states:
-                flattened_transitions.add((start_state, symbol, next_state))
-
-        self.for_each(_add_flattened)
-
-        return flattened_transitions
+        for key, value in list(self.items()):
+            if match(key, value):
+                del self[key]

@@ -1,4 +1,4 @@
-from _common.datastructures import ObservableSet
+from _common.data_structures import ObservableSet
 from .symbol import Symbol
 from typing import Iterable
 
@@ -8,6 +8,6 @@ class Alphabet(ObservableSet[Symbol]):
 
     def __init__(
         self,
-        iterable: Iterable[Symbol] | None = None,
+        symbols: Iterable[Symbol] | None = None,
     ):
-        super().__init__(iterable)
+        super().__init__(symbols)

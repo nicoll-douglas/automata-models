@@ -67,3 +67,35 @@ class ObservableSet[T](MutableSet[T]):
     @override
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._data})"
+
+
+class ObservableSetController:
+    """Controller class for modifying ObservableSet internals."""
+
+    @staticmethod
+    def set__pre_add[T](
+        observable_set: ObservableSet[T],
+        value: Callable[[T], None] | None = None,
+    ) -> None:
+        observable_set._pre_add = value
+
+    @staticmethod
+    def set__post_add[T](
+        observable_set: ObservableSet[T],
+        value: Callable[[T], None] | None = None,
+    ) -> None:
+        observable_set._post_add = value
+
+    @staticmethod
+    def set__pre_discard[T](
+        observable_set: ObservableSet[T],
+        value: Callable[[T], None] | None = None,
+    ) -> None:
+        observable_set._pre_discard = value
+
+    @staticmethod
+    def set__post_discard[T](
+        observable_set: ObservableSet[T],
+        value: Callable[[T], None] | None = None,
+    ) -> None:
+        observable_set._post_discard = value
