@@ -1,8 +1,13 @@
-from _common.datastructures import UniqueNamedObjectSet
+from _common.datastructures import ObservableSet
 from .symbol import Symbol
+from typing import Iterable
 
 
-class Alphabet(UniqueNamedObjectSet[Symbol]):
-    """Implements an alphabet as a set of uniquely named symbols."""
+class Alphabet(ObservableSet[Symbol]):
+    """Implements an alphabet as an observable set of symbols."""
 
-    pass
+    def __init__(
+        self,
+        iterable: Iterable[Symbol] | None = None,
+    ):
+        super().__init__(iterable)

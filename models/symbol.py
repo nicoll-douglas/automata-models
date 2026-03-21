@@ -1,7 +1,8 @@
-from _common.datastructures.named_object import NamedObject
+from __future__ import annotations
+from _common.datastructures import UID
 
 
-class Symbol(NamedObject):
-    """Implements a symbol as a named object."""
+class Symbol(UID[str]):
+    """Implements a symbol as a string-based UID object."""
 
     pass

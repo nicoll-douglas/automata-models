@@ -1,4 +1,4 @@
-from typing import Iterable, Iterator
+from typing import Iterator, AbstractSet
 
 
 class DisjointSetUnion[T]:
@@ -7,9 +7,9 @@ class DisjointSetUnion[T]:
     # mapping of states to their immediate parents
     _parents: dict[T, T]
     # all items under consideration of the data structure
-    _items: Iterable[T]
+    _items: AbstractSet[T]
 
-    def __init__(self, items: Iterable[T]):
+    def __init__(self, items: AbstractSet[T]):
         """Initialise the disjoint sets with each item in its own disjoint set."""
         self._items = items
         self._parents = {t: t for t in items}
@@ -38,7 +38,7 @@ class DisjointSetUnion[T]:
     def union(self, item_a: T, item_b: T) -> None:
         """Merge the sets containing 'item_a' and 'item_b'.
 
-        If the items are already in the same set, this operation does nothing.
+        If the items are already in the same set (i.e have the same root), this operation does nothing.
 
         Args:
             item_a: First element.
