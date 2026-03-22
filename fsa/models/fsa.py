@@ -123,7 +123,6 @@ class FSA:
 
     @transition_table.setter
     def transition_table(self, new_value: TransitionTable) -> None:
-
         def pre_setitem(key: TransitionTable.Key, value: TransitionTable.Value) -> None:
             start_state: State
             symbol: Symbol | Word
@@ -138,7 +137,7 @@ class FSA:
 
             if not value <= self.states:
                 raise ValueError(
-                    f"Expected the set of next states to be a subset of the set of states {self.states}. Got {value!r}."
+                    f"Expected the set of next states to be a subset of the set of states {self.states}. Got {value}."
                 )
 
         new_value._pre_setitem = pre_setitem
@@ -194,7 +193,6 @@ class FSA:
         Returns:
             The epsilon-closure which contains all states that can be reached by only following epsilon-transitions from the given states. At minimum this will be a set states including all the given states.
         """
-
         closure: set[State] = set(states)
         queue: deque[State] = deque(closure)
 

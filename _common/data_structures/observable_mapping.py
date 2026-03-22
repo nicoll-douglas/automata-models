@@ -35,10 +35,11 @@ class ObservableMapping[K, V](MutableMapping[K, V]):
 
         if mapping is not None:
             self.update(dict)
+
         if kwargs:
             self.update(kwargs)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> V:
         if key in self._data:
             return self._data[key]
 
@@ -77,7 +78,6 @@ class ObservableMapping[K, V](MutableMapping[K, V]):
     def __repr__(self):
         return f"{self.__class__.__name__}({self._data})"
 
-    # override to avoid parent class using our __getitem__ implementation
     @override
     def __contains__(self, key: object) -> bool:
         return key in self._data

@@ -27,13 +27,11 @@ class TransitionTable(
     _post_value_discard: Callable[[State], None] | None = None
 
     def __init__(self, mapping: Mapping[Key, AbstractSet[State]] | None = None):
-        initial_table: dict[TransitionTable.Key, TransitionTable.Value] | None = None
-
-        if mapping is not None:
-            initial_table = {}
-
-            for k, v in mapping.items():
-                initial_table[k] = self._create_observable_value(v)
+        initial_table: dict[TransitionTable.Key, TransitionTable.Value] | None = (
+            None
+            if mapping is None
+            else {k: self._create_observable_value(v) for k, v in mapping.items()}
+        )
 
         super().__init__(initial_table)
 
@@ -68,13 +66,14 @@ class TransitionTable(
 
     @override
     def __setitem__(self, key: Key, value: AbstractSet[State]) -> None:
-        value_to_set: ObservableSet[State] = (
-            value
-            if isinstance(value, ObservableSet)
-            else self._create_observable_value(value)
+        super().__setitem__(
+            key,
+            (
+                value
+                if isinstance(value, ObservableSet)
+                else self._create_observable_value(value)
+            ),
         )
-
-        super().__setitem__(key, value_to_set)
 
     def __missing__(self, key: Key) -> ObservableSet[State]:
         """Add the given key to the table, mapping to an empty observable set."""
