@@ -8,15 +8,14 @@ if TYPE_CHECKING:
 
 
 def _dfa_accepts(dfa: FSA, word: str) -> bool:
-    """Return True if the given DFA accepts the given word,
-    otherwise False.
+    """Return True if the given DFA accepts the given word, otherwise False.
 
     Raises:
         ValueError: If the given FSA is not a DFA.
     """
     if FSAType.DFA not in dfa.type:
         raise ValueError(
-            f"Expected an FSA of type {FSAType.DFA}. " f"Got an FSA of type {dfa.type}."
+            f"Expected an FSA of type {FSAType.DFA}. Got an FSA of type {dfa.type}."
         )
 
     current_state: State = dfa.initial_state
@@ -24,18 +23,18 @@ def _dfa_accepts(dfa: FSA, word: str) -> bool:
     for symbol in word:
         next_states: set[State] = dfa.delta(current_state, symbol)
 
-        # no next state so we hit a dead-end which means the word
-        # is not accepted
         if not next_states:
+            # no next state so we hit a dead-end which means the word is not accepted
+            # this is the case when the DFA is not complete
             return False
 
         # since we are traversing a DFA the set only has one state
-        current_state = next_states.pop()
+        (current_state,) = next_states
 
+    # the word is accepted if after finishing traversal, the current state is a final state
     return current_state in dfa.final_states
 
 
 def accepts(fsa: FSA, word: str) -> bool:
-    """Return True if the FSA accepts the given word otherwise
-    False."""
+    """Return True if the FSA accepts the given word otherwise False."""
     return _dfa_accepts(subset_construction(fsa), word)
