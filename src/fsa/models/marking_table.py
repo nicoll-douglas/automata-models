@@ -29,6 +29,7 @@ class MarkingTable(SetDict[State, bool]):
 
     def __init__(self, states: Set[State]):
         """Initialise all items in the marking table to False (unmarked)."""
+        self._states = frozenset(states)
         states_list: tuple[State, ...] = tuple(states)
         self._row_states = states_list[1:]
         self._col_states = states_list[:-1]
@@ -37,9 +38,9 @@ class MarkingTable(SetDict[State, bool]):
 
         super().__init__(
             {
-                (row_state, col_state): False
-                for row_state in self._row_states
-                for col_state in self._col_states
+                (self._row_states[j], self._col_states[i]): False
+                for i in range(self.SIZE)
+                for j in range(i, self.SIZE)
             }
         )
 
@@ -53,7 +54,7 @@ class MarkingTable(SetDict[State, bool]):
 
         if not (
             first_state in self._row_states_set and second_state in self._col_states_set
-        ) or not (
+        ) and not (
             first_state in self._col_states_set and second_state in self._row_states_set
         ):
             raise ValueError(

@@ -129,7 +129,7 @@ def minimize(fsa: FSA) -> FSA:
         marking_table_dsu
     )
     min_fsa_initial_state: _MinFSAState = min_fsa_states[
-        marking_table_dsu.find(fsa.initial_state)
+        marking_table_dsu.find(dfa.initial_state)
     ]
 
     min_dfa: FSA = FSA(

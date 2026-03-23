@@ -32,6 +32,9 @@ class UID[T]:
 
         self._uid = uid
 
+    def __getnewargs__(self) -> tuple[T]:
+        return (self.UID,)
+
     @property
     def UID(self) -> T:
         return self._uid
