@@ -1,35 +1,83 @@
-from typing import AbstractSet
-from lib import DisjointSetUnion, SetMap
+from typing import AbstractSet, Iterable
+from _common.data_structures import SetDict
 from .state import State
 
 
-class _MarkingTable(SetMap[State, bool]):
-    """Represents a triangular marking table for performing FSA
-    minimization."""
+class MarkingTable(SetDict[State, bool]):
+    """Represents a triangular marking table for performing FSA minimization.
 
-    # the states of the FSA to use in the marking table
-    _states: AbstractSet[State]
+    The following illustrates a representation of a table for an FSA with states 0, 1, 2, and 3, where the row states 1, 2, 3 and col states are 0, 1, 2:
 
-    # type for keys in the marking table
+    1|_|_
+    2|_|_|_
+    3|_|_|_|
+      0 1 2
+
+    Since we extend SetDict, the order of row-col state pairs that define the keys don't actually matter which is expected of a triangular marking table.
+    """
+
+    _states: frozenset[State]
+    _row_states: tuple[State]
+    _col_states: tuple[State]
+    _row_states_set: set[State]
+    _col_states_set: set[State]
+
+    # ideal type for keys used for access with the marking table
     type Key = tuple[State, State]
     # type for values in the marking table, True = marked, False = unmarked
     type Value = bool
 
     def __init__(self, states: AbstractSet[State]):
         """Initialise all items in the marking table to False (unmarked)."""
-        self._states = states
-        states_list: list[State] = list(states)
+        states_list: tuple[State] = tuple(states)
+        self._row_states = states_list[1:]
+        self._col_states = states_list[:-1]
+        self._row_states_set = set(self._row_states)
+        self._col_states_set = set(self._col_states)
 
         super().__init__(
-            ((states_list[i], states_list[j]), False)
-            for i in range(len(states_list) - 1)
-            for j in range(i + 1, len(states_list))
+            {
+                (row_state, col_state): False
+                for row_state in self._row_states
+                for col_state in self._col_states
+            }
         )
 
+    def __setitem__(self, key: Iterable[State], value: bool):
+        if len(key) != 2:
+            raise ValueError(f"Expected a key of length 2. Got {key!r}.")
+
+        first_state: State
+        second_state: State
+        first_state, second_state = key
+
+        if not (
+            first_state in self._row_states_set and second_state in self._col_states_set
+        ) or not (
+            first_state in self._col_states_set and second_state in self._row_states_set
+        ):
+            raise ValueError(
+                f"Expected a key with a state in the set of states {self._row_states_set!r} and a state in the set of states {self._col_states_set!r}. Got {key!r}."
+            )
+
+        return super().__setitem__(key, value)
+
     @property
-    def size(self) -> int:
+    def SIZE(self) -> int:
         """Get the size of the marking table."""
-        return len(self._states) - 1
+        return len(self._row_states)  # or self._col_states
+
+    @property
+    def COL_STATES(self) -> tuple[State]:
+        return self._col_states
+
+    @property
+    def ROW_STATES(self) -> tuple[State]:
+        return self._row_states
+
+    @property
+    def STATES(self) -> frozenset[State]:
+        return self._states
 
     def mark(self, state_pair: Key) -> None:
         """Mark a state pair in the marking table."""
@@ -39,51 +87,6 @@ class _MarkingTable(SetMap[State, bool]):
         """Unmark a state pair in the marking table."""
         self[state_pair] = False
 
-    def is_marked(self, state_pair: Key) -> Value:
+    def marked(self, state_pair: Key) -> Value:
         """Return True if the given pair is marked or False otherwise."""
         return self[state_pair]
-
-    def mark_initial(self, final_states: AbstractSet[State]) -> None:
-        """Mark all state pairs consisting of a non-final and a final state.
-
-        This performs the initial step of the minimization algorithm.
-        """
-        for row_state, col_state in self.keys():
-            # initial marking, if one final and other not then mark (True)
-            if (row_state in final_states) ^ (col_state in final_states):
-                self.mark((row_state, col_state))
-
-    def should_mark(self, state_pair_delta: Key) -> Value:
-        """Return True if an original state pair should be marked depending
-        on the state pair received after performing a transition, or False
-        otherwise.
-
-        Args:
-            state_pair_delta: The state pair received after performing
-            a transition in the FSA from the original state pair.
-        """
-        row_state: State
-        col_state: State
-        row_state, col_state = state_pair_delta
-
-        if row_state == col_state:
-            return False
-
-        # if delta marked then should mark original
-        return self.is_marked((row_state, col_state))
-
-    def get_disjoint_set_unions(self) -> DisjointSetUnion[State]:
-        """Get the disjoint set unions of all the states in the
-        minimized FSA from the marking table depending on their mark status.
-
-        If pairs A and B are unmarked and they contain a common state, then
-        they are merged into a set. If a pair in the table is marked then each
-        state will belong in its own individual set.
-        """
-        unions: DisjointSetUnion[State] = DisjointSetUnion[State](self._states)
-
-        for (state_a, state_b), mark in self.items():
-            if not mark:
-                unions.union(state_a, state_b)
-
-        return unions

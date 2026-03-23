@@ -1,96 +1,151 @@
+from __future__ import annotations
 from ..models.fsa import FSA
 from ..models.state import State
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 from collections import deque
 from .epsilon_remove import epsilon_remove
+
+if TYPE_CHECKING:
+    from language.models import Alphabet
+
+# represents an acceptance strategy for whether a product FSA state should be a final state
+type _FinalStateAcceptanceStrategy = Literal[
+    "intersection", "union", "difference", "xor"
+]
+
+
+class _ProductFSAState:
+    """Represents a state in the new product FSA being computed."""
+
+    # a state sourced from the first FSA (left side of the product)
+    _state_a: State
+    # a state sourced from the second FSA (right side of the product)
+    _state_b: State
+    # the actual state object that will be given to the new product FSA
+    _state_obj: State
+
+    def __init__(self, state_a: State, state_b: State):
+        self._state_a = state_a
+        self._state_b = state_b
+        self._state_obj = _ProductFSAState._create_state_obj(state_a, state_b)
+
+    @property
+    def STATE_A(self) -> State:
+        return self._state_a
+
+    @property
+    def STATE_B(self) -> State:
+        return self._state_b
+
+    @property
+    def STATE_OBJ(self) -> State:
+        return self._state_obj
+
+    @staticmethod
+    def _create_state_obj(state_a: State, state_b: State) -> State:
+        """Create and return a state object in the new product FSA."""
+        return State(f"({str(state_a)}, {str(state_b)})")
+
+    @staticmethod
+    def get_product_fsa_states(fsa_a: FSA, fsa_b: FSA) -> set[State]:
+        """Get the set of states (state objects) for the new product FSA."""
+        return {
+            _ProductFSAState._create_state_obj(state_a, state_b)
+            for state_a in fsa_a.states
+            for state_b in fsa_b.states
+        }
+
+    @staticmethod
+    def get_product_fsa_initial_state(fsa_a: FSA, fsa_b: FSA) -> _ProductFSAState:
+        """Get the product FSA initial state."""
+        return _ProductFSAState(fsa_a.initial_state, fsa_b.initial_state)
+
+    def is_final(
+        self, fsa_a: FSA, fsa_b: FSA, acceptance_strategy: _FinalStateAcceptanceStrategy
+    ) -> bool:
+        """Return True if the the product FSA state is a final state based on the given acceptance strategy."""
+        if acceptance_strategy == "union":
+            return (
+                self.STATE_A in fsa_a.final_states or self.STATE_B in fsa_b.final_states
+            )
+        elif acceptance_strategy == "difference":
+            return (
+                self.STATE_A in fsa_a.final_states
+                and self.STATE_B not in fsa_b.final_states
+            )
+        elif acceptance_strategy == "xor":
+            return (self.STATE_A in fsa_a.final_states) ^ (
+                self.STATE_B in fsa_b.final_states
+            )
+        else:
+            return (
+                self.STATE_A in fsa_a.final_states
+                and self.STATE_B in fsa_b.final_states
+            )
 
 
 def product(
     a: FSA,
     b: FSA,
-    acceptance: Literal["intersection", "union", "difference", "xor"] = "intersection",
+    acceptance_strategy: _FinalStateAcceptanceStrategy = "intersection",
+    no_unreachable: bool = True,
 ) -> FSA:
-    """Create and return the product FSA with another FSA.
+    """Create and return the product FSA of two FSAs.
 
     Args:
         a: The first FSA.
         b: The second FSA.
-        acceptance: The strategy for computing final states. For
-        intersection a product state is final if both states were
-        original final states. For union, 1 or more. For difference
-        the state taken from 'a' must be final but not the state
-        taken from 'b'. For xor, 1 or the other.
-
-    Returns:
-        The product FSA.
+        acceptance_strategy: The strategy for computing final states.
     """
+    # remove epsilon transitions to make life easier
     a = epsilon_remove(a)
     b = epsilon_remove(b)
 
-    # a map of tuples to actual state objects in the product FSA
-    product_states: dict[tuple[State, State], State] = {
-        (a_state, b_state): State((a_state, b_state))
-        for a_state in a.states
-        for b_state in b.states
-    }
-
-    product_initial_state: tuple[State, State] = (a.initial_state, b.initial_state)
-
-    product_fsa: FSA = FSA(
-        initial_state=product_states[product_initial_state],
-        states=set(product_states.values()),
-        alphabet=a.alphabet | b.alphabet,
+    product_initial_state: _ProductFSAState = (
+        _ProductFSAState.get_product_fsa_initial_state(a, b)
     )
 
-    seen_states: set[tuple[State, State]] = {product_initial_state}
+    product_fsa: FSA = FSA(
+        initial_state=product_initial_state.STATE_OBJ,
+        states=_ProductFSAState.get_product_fsa_states(a, b),
+        alphabet=a.alphabet | b.alphabet,
+        final_states=(
+            {product_initial_state.STATE_OBJ}
+            if product_initial_state.is_final(a, b, acceptance_strategy)
+            else None
+        ),
+    )
 
-    discovered: deque[tuple[State, State]] = deque([product_initial_state])
+    seen_states: set[State] = {product_initial_state.STATE_OBJ}
+    states_unprocessed: deque[_ProductFSAState] = deque([product_initial_state])
+    common_alphabet: Alphabet = a.alphabet & b.alphabet
 
-    common_symbols: set[str] = a.alphabet & b.alphabet
+    while states_unprocessed:
+        current_state: _ProductFSAState = states_unprocessed.popleft()
 
-    while discovered:
-        current: tuple[State, State] = discovered.popleft()
-
-        for symbol in common_symbols:
-            a_state: State
-            b_state: State
-            a_state, b_state = current
-
-            for delta_a in a.delta(a_state, symbol):
-                for delta_b in b.delta(b_state, symbol):
-                    product_state: tuple[State, State] = (delta_a, delta_b)
-
-                    product_fsa.transition_table[(product_states[current], symbol)].add(
-                        product_states[product_state]
+        # traverse the FSAs in parallel
+        for symbol in common_alphabet:
+            for a_delta in a.delta(current_state.STATE_A, symbol):
+                for b_delta in b.delta(current_state.STATE_B, symbol):
+                    # get a possible delta in the product FSA for the current state
+                    discovered_state: _ProductFSAState = _ProductFSAState(
+                        a_delta, b_delta
                     )
 
-                    if product_state not in seen_states:
-                        seen_states.add(product_state)
-                        discovered.append(product_state)
+                    # add the delta to the transition table
+                    product_fsa.transition_table[(current_state.STATE_OBJ, symbol)].add(
+                        discovered_state.STATE_OBJ
+                    )
 
-    if acceptance == "union":
-        product_fsa.final_states = {
-            product_state
-            for (a_state, b_state), product_state in product_states.items()
-            if a_state in a.final_states or b_state in b.final_states
-        }
-    elif acceptance == "difference":
-        product_fsa.final_states = {
-            product_state
-            for (a_state, b_state), product_state in product_states.items()
-            if a_state in a.final_states and b_state not in b.final_states
-        }
-    elif acceptance == "xor":
-        product_fsa.final_states = {
-            product_state
-            for (a_state, b_state), product_state in product_states.items()
-            if (a_state in a.final_states) ^ (b_state in b.final_states)
-        }
-    else:
-        product_fsa.final_states = {
-            product_states[(self_final_state, other_final_state)]
-            for self_final_state in a.final_states
-            for other_final_state in b.final_states
-        }
+                    if discovered_state.STATE_OBJ not in seen_states:
+                        seen_states.add(discovered_state.STATE_OBJ)
+                        states_unprocessed.append(discovered_state)
+
+                        # final state check
+                        if discovered_state.is_final(a, b, acceptance_strategy):
+                            product_fsa.final_states.add(discovered_state.STATE_OBJ)
+
+    if no_unreachable:
+        product_fsa.remove_unreachable_states()
 
     return product_fsa

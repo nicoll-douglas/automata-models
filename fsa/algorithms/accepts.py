@@ -13,9 +13,11 @@ def _dfa_accepts(dfa: FSA, word: str) -> bool:
     Raises:
         ValueError: If the given FSA is not a DFA.
     """
-    if FSAType.DFA not in dfa.type:
+    dfa_type: FSAType = dfa.type()
+
+    if FSAType.DFA not in dfa_type:
         raise ValueError(
-            f"Expected an FSA of type {FSAType.DFA}. Got an FSA of type {dfa.type}."
+            f"Expected an FSA of type {FSAType.DFA}. Got an FSA of type {dfa_type}."
         )
 
     current_state: State = dfa.initial_state
@@ -29,7 +31,7 @@ def _dfa_accepts(dfa: FSA, word: str) -> bool:
             return False
 
         # since we are traversing a DFA the set only has one state
-        (current_state,) = next_states
+        current_state = next_states.pop()
 
     # the word is accepted if after finishing traversal, the current state is a final state
     return current_state in dfa.final_states

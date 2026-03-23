@@ -50,5 +50,18 @@ class DisjointSetUnion[T]:
         if root_a != root_b:
             self._parents[root_a] = root_b
 
+    def sets(self) -> dict[T, set[T]]:
+        groupings: dict[T, set[T]] = {}
+
+        for item in self:
+            root: T = self.find(item)
+
+            if root not in groupings:
+                groupings[root] = set()
+
+            groupings[root].add(item)
+
+        return groupings
+
     def __iter__(self) -> Iterator[T]:
         return iter(self._items)

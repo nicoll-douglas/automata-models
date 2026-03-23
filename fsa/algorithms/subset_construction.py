@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ..models.fsa import FSA
 from ..models.state import State
 from collections import deque
@@ -23,57 +24,39 @@ class _NewDFAState:
         self._state_obj = State(state_obj_uid)
 
     @property
-    def state_obj(self) -> State:
+    def STATE_OBJ(self) -> State:
         return self._state_obj
 
     @property
-    def states(self) -> frozenset[State]:
+    def STATES(self) -> frozenset[State]:
         return self._states
 
+    def is_final(self, old_fsa: FSA) -> bool:
+        """Return True if the DFA state is a final state, otherwise False.
 
-def _get_new_dfa_initial_state(old_fsa: FSA) -> _NewDFAState:
-    """Compute the initial state of the new DFA.
+        Uses the formula: S ∩ F != Ø.
+        """
+        return len(self.STATES & old_fsa.final_states) != 0
 
-    Uses the formula: q_0' = E({q_0})
+    def delta(self, symbol: Symbol, old_fsa: FSA) -> _NewDFAState:
+        """Get the delta for the DFA state for the given symbol.
 
-    Args:
-        old_fsa: The old FSA from which we are constructing a new DFA.
-    """
-    return _NewDFAState(old_fsa.epsilon_closure(old_fsa.initial_state))
+        Uses the formula: δ'(S, a) = ∪(s∈S) E(δ(s, a)).
+        """
+        next_state: set[State] = set()
 
+        for old_fsa_state in self.STATES:
+            next_state |= old_fsa.epsilon_closure(old_fsa.delta(old_fsa_state, symbol))
 
-def _is_new_dfa_final_state(
-    new_dfa_state: _NewDFAState, old_fsa_final_states: AbstractSet[State]
-) -> bool:
-    """Return True if given new DFA state is a final state, otherwise False.
+        return _NewDFAState(next_state)
 
-    Uses the formula: S ∩ F != Ø, where S is a a new DFA state and F is the old set of final states. I.e, the new final state contains an old final state.
+    @staticmethod
+    def get_new_dfa_initial_state(old_fsa: FSA) -> _NewDFAState:
+        """Compute the initial state of the new DFA.
 
-    Args:
-        new_dfa_state: A new state in the DFA.
-        old_fsa_final_states: The final states of the old FSA from which we are creating a DFA.
-    """
-    return len(new_dfa_state & old_fsa_final_states) != 0
-
-
-def _get_new_dfa_delta(
-    dfa_start_state: _NewDFAState, symbol: Symbol, old_fsa: FSA
-) -> _NewDFAState:
-    """Get a the transition state for a starting state and symbol in the new DFA.
-
-    Uses the formula: δ'(S, a) = ∪(s∈S) E(δ(s, a)), where S is a state in the new DFA and 'a' is the transition symbol.
-
-    Args:
-        dfa_state_state: The starting state of the transition.
-        symbol: The transition symbol.
-        old_fsa: The old FSA from which we are computing a new DFA.
-    """
-    next_state: set[State] = set()
-
-    for old_fsa_state in dfa_start_state.states:
-        next_state |= old_fsa.epsilon_closure(old_fsa.delta(old_fsa_state, symbol))
-
-    return _NewDFAState(next_state)
+        Uses the formula: q_0' = E({q_0})
+        """
+        return _NewDFAState(old_fsa.epsilon_closure(old_fsa.initial_state))
 
 
 def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
@@ -86,15 +69,13 @@ def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
         An equivalent DFA.
     """
     # get the DFA's initial state (NFA epsilon closure)
-    dfa_initial_state: _NewDFAState = _get_new_dfa_initial_state(fsa)
+    dfa_initial_state: _NewDFAState = _NewDFAState.get_new_dfa_initial_state(fsa)
 
     dfa: FSA = FSA(
-        initial_state=dfa_initial_state.state_obj,
-        states={dfa_initial_state.state_obj},
+        initial_state=dfa_initial_state.STATE_OBJ,
+        states={dfa_initial_state.STATE_OBJ},
         final_states=(
-            {dfa_initial_state.state_obj}
-            if _is_new_dfa_final_state(dfa_initial_state)
-            else None
+            {dfa_initial_state.STATE_OBJ} if dfa_initial_state.is_final(fsa) else None
         ),
         alphabet=deepcopy(fsa.alphabet),
     )
@@ -107,27 +88,25 @@ def subset_construction(fsa: FSA, complete: bool = True) -> FSA:
 
         for symbol in fsa.alphabet:
             # get the delta
-            discovered_state: _NewDFAState = _get_new_dfa_delta(
-                current_dfa_state, symbol, fsa
-            )
+            discovered_state: _NewDFAState = current_dfa_state.delta(symbol, fsa)
 
             if not complete and not discovered_state:
                 continue
 
             # check if the state hasn't already been discovered
-            if discovered_state.state_obj not in dfa.states:
-                dfa.states.add(discovered_state.state_obj)
+            if discovered_state.STATE_OBJ not in dfa.states:
+                dfa.states.add(discovered_state.STATE_OBJ)
 
                 # check whether this new discovered state is final and add it if so
-                if _is_new_dfa_final_state(discovered_state):
-                    dfa.final_states.add(discovered_state.state_obj)
+                if discovered_state.is_final(fsa):
+                    dfa.final_states.add(discovered_state.STATE_OBJ)
 
                 # add the new discovered state for processing
                 states_unprocessed.append(discovered_state)
 
             # add the transition to the transition table
-            dfa.transition_table[(current_dfa_state.state_obj, symbol)] = {
-                discovered_state.state_obj
+            dfa.transition_table[(current_dfa_state.STATE_OBJ, symbol)] = {
+                discovered_state.STATE_OBJ
             }
 
     return dfa

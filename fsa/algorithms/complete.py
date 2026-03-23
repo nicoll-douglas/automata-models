@@ -1,18 +1,30 @@
 from ..models.state import State
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AbstractSet
+from copy import deepcopy
 
 if TYPE_CHECKING:
     from ..models.fsa import FSA
 
 
+def _create_new_dead_state(fsa_states: AbstractSet[State]) -> State:
+    """Create a new dead state not in the given set of FSA states."""
+    counter: int = 0
+    dead_state: State = State(f"state_{counter}")
+
+    while dead_state in fsa_states:
+        counter += 1
+        dead_state = State(f"state_{counter}")
+
+    return dead_state
+
+
 def complete(fsa: FSA) -> FSA:
     """Create and return a complete version of the FSA.
 
-    That is, for every state-symbol pair that is missing, create a
-    transition pointing to a dead state.
+    That is, for every state-symbol pair that is missing, create a transition pointing to a dead state.
     """
-    complete_fsa: FSA = fsa.copy()
-    dead_state: State = State("d")
+    complete_fsa: FSA = deepcopy(fsa)
+    dead_state: State = _create_new_dead_state(complete_fsa.states)
     found_missing: bool = False
 
     for state in set(complete_fsa.states):

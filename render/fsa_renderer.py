@@ -59,16 +59,16 @@ class FSARenderer:
         if isinstance(symbol, Word):
             return _GREEK_SMALL_LETTER_EPSILON
 
-        if symbol.uid == _GREEK_SMALL_LETTER_EPSILON:
+        if symbol.UID == _GREEK_SMALL_LETTER_EPSILON:
             return f"'{_GREEK_SMALL_LETTER_EPSILON}'"
 
-        return symbol.uid
+        return symbol.UID
 
     @staticmethod
     def _insert_initial_state_arrow(graph: Digraph, initial_state: State) -> None:
         """Insert the arrow that points to the node of the initial state into the given graph."""
         graph.node("start", label="", shape="none", width="0", height="0")
-        graph.edge("start", initial_state.uid)
+        graph.edge("start", initial_state.UID)
 
     @staticmethod
     def _insert_nodes(
@@ -79,7 +79,7 @@ class FSARenderer:
         """Insert nodes into the graph based on the given states and final states of an FSA."""
         for state in states:
             graph.node(
-                state.uid,
+                state.UID,
                 shape=("doublecircle" if state in final_states else "circle"),
             )
 
@@ -89,8 +89,8 @@ class FSARenderer:
         for (start_state, symbol), next_states in transition_table.items():
             for next_state in next_states:
                 graph.edge(
-                    start_state.uid,
-                    next_state.uid,
+                    start_state.UID,
+                    next_state.UID,
                     label=cls._transition_label(symbol),
                 )
 
@@ -108,4 +108,4 @@ class FSARenderer:
                 )
 
         for (start_state, next_state), labels in transition_labels.items():
-            graph.edge(start_state.uid, next_state.uid, label=", ".join(sorted(labels)))
+            graph.edge(start_state.UID, next_state.UID, label=", ".join(sorted(labels)))

@@ -150,7 +150,6 @@ class FSA:
 
         self._transition_table = new_value
 
-    @property
     def type(self) -> FSAType:
         """Gets bitwise flags indicating the type of the FSA."""
         # ideal scenario, complete and DFA
@@ -180,9 +179,63 @@ class FSA:
 
         return type
 
-    def delta(self, state: State, symbol: Symbol | Word) -> ObservableSet[State]:
-        """Get the set of next states for a state and symbol in the transition table."""
-        return self.transition_table[(state, symbol)]
+    def unreachable_states(self) -> set[State]:
+        visited: set[State] = {self.initial_state}
+        queue: deque[State] = deque([self.initial_state])
+
+        while queue:
+            current_state: State = queue.popleft()
+
+            for (start_state, _), next_states in self.transition_table.items():
+                if start_state == current_state:
+                    unvisited: ObservableSet[State] = next_states - visited
+                    visited |= unvisited
+                    queue.extend(unvisited)
+
+        return set(self.states - visited)
+
+    def remove_unreachable_states(self) -> set[State]:
+        unreachable_states: set[State] = self.unreachable_states()
+
+        self.states -= unreachable_states
+
+        return unreachable_states
+
+    def unproductive_states(self) -> set[State]:
+        productive_states: set[State] = set(self.final_states)
+        state_added: bool = True
+
+        while state_added:
+            state_added = False
+
+            for (start_state, _), next_states in self.transition_table.items():
+                if productive_states & next_states:
+                    if start_state not in productive_states:
+                        productive_states.add(start_state)
+                        state_added = True
+
+        return set(self.states - productive_states)
+
+    def remove_unproductive_states(self) -> set[State]:
+        unproductive_states: set[State] = self.unproductive_states()
+
+        self.states -= unproductive_states
+
+        return unproductive_states
+
+    def delta(
+        self, states: State | AbstractSet[State], symbol: Symbol | Word
+    ) -> set[State]:
+        """Get the set of next states for a given state (or given states) and symbol in the transition table."""
+        if isinstance(states, State):
+            return set(self.transition_table[(states, symbol)])
+
+        delta_states: set[State] = set()
+
+        for state in states:
+            delta_states |= self.transition_table[(state, symbol)]
+
+        return delta_states
 
     def epsilon_closure(self, states: AbstractSet[State]) -> set[State]:
         """Get the epsilon-closure of a set of states in the FSA.
