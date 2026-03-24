@@ -35,25 +35,25 @@ class ObservableSet[T](MutableSet[T]):
             for element in iterable:
                 self.add(element)
 
-    def add(self, element: T) -> None:
+    def add(self, value: T) -> None:
         """Add an element to the set, running pre and post-add hooks."""
         if self._pre_add is not None:
-            self._pre_add(element)
+            self._pre_add(value)
 
-        self._data.add(element)
+        self._data.add(value)
 
         if self._post_add is not None:
-            self._post_add(element)
+            self._post_add(value)
 
-    def discard(self, element: T) -> None:
+    def discard(self, value: T) -> None:
         """Discard an element from the set if it is in the set, running pre and post-add hooks."""
         if self._pre_discard is not None:
-            self._pre_discard(element)
+            self._pre_discard(value)
 
-        self._data.discard(element)
+        self._data.discard(value)
 
         if self._post_discard is not None:
-            self._post_discard(element)
+            self._post_discard(value)
 
     def __contains__(self, element: object) -> bool:
         return element in self._data
