@@ -13,6 +13,7 @@ class SetDict[T, U](UserDict[frozenset[T], U]):
             else None
         )
 
+    # TODO: rename parameter iterable -> collection
     def _key(self, iterable: Collection[T]) -> frozenset[T]:
         """Get the underlying key in the dictionary for an iterable."""
         return frozenset(iterable)
