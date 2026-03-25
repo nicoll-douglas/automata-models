@@ -1,6 +1,7 @@
 from fsa.models.transition_table import TransitionTable
 from test.types import TransitionCountData
-from functools import reduce
+
+# TODO: docstrings
 
 
 class TestTransitionTable:
