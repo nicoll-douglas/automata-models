@@ -3,7 +3,7 @@ from ..models import FSA, State
 from collections import deque
 from copy import deepcopy
 from collections.abc import Set
-from language import Symbol
+from atmta_study_tool.language import Symbol
 
 
 class _NewDFAState:

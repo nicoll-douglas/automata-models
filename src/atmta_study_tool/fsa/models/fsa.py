@@ -1,10 +1,12 @@
 from .fsa_type import FSAType
 from .transition_table import TransitionTable
 from collections import deque
-from _common.data_structures import ObservableSet, ObservableSetController
-from language import Alphabet, Word
+from atmta_study_tool._common.data_structures import (
+    ObservableSet,
+    ObservableSetController,
+)
+from atmta_study_tool.language import Alphabet, Word, Symbol
 from collections.abc import Set
-from language import Symbol
 from .state import State
 
 

@@ -1,6 +1,6 @@
-from fsa.models.state import State
-from language.models.word import Word
-from language.models.symbol import Symbol
+from atmta_study_tool.fsa.models import State
+from atmta_study_tool.language.models import Word
+from atmta_study_tool.language.models import Symbol
 from typing import Literal
 
 type TransitionCountData = tuple[

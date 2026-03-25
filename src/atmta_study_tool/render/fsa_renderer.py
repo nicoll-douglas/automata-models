@@ -3,8 +3,8 @@ from collections import defaultdict
 from collections.abc import Set
 from os import PathLike
 from .constants import _DEFAULT_RENDER_DIR, _GREEK_SMALL_LETTER_EPSILON
-from language import Word, Symbol
-from fsa import FSA, State, TransitionTable
+from atmta_study_tool.language import Word, Symbol
+from atmta_study_tool.fsa import FSA, State, TransitionTable
 
 
 class FSARenderer:

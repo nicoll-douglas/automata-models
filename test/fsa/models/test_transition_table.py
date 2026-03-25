@@ -1,4 +1,4 @@
-from fsa.models.transition_table import TransitionTable
+from atmta_study_tool.fsa.models import TransitionTable
 from test.types import TransitionCountData
 
 # TODO: docstrings

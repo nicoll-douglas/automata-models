@@ -1,6 +1,6 @@
 from ..models import State, FSA
 from copy import deepcopy
-from _common.utils import create_unique_objs_amongst
+from atmta_study_tool._common.utils import create_unique_objs_amongst
 
 
 def complete(fsa: FSA) -> FSA:
@@ -9,6 +9,7 @@ def complete(fsa: FSA) -> FSA:
     That is, for every state-symbol pair that is missing, create a transition pointing to a dead state.
     """
     complete_fsa: FSA = deepcopy(fsa)
+    # TODO: fix any calls to this function still using .pop
     dead_state: State = create_unique_objs_amongst(
         complete_fsa.states,
         initial=State("d"),

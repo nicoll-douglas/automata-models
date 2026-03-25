@@ -1,7 +1,7 @@
 from ..models import FSA, State
 from copy import deepcopy
 from collections.abc import Set
-from language import Symbol
+from atmta_study_tool.language import Symbol
 
 # a memo object that maps states in an FSA to its epsilon-closure
 type _EpsilonClosureMap = dict[State, set[State]]

@@ -1,9 +1,9 @@
 from ..models import MarkingTable, FSA, State
 from .subset_construction import subset_construction
-from _common.data_structures import DisjointSetUnion
+from atmta_study_tool._common.data_structures import DisjointSetUnion
 from collections.abc import Set
 from copy import deepcopy
-from language import Symbol
+from atmta_study_tool.language import Symbol
 
 
 class _MinFSAState:

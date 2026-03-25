@@ -1,10 +1,10 @@
 from __future__ import annotations
 from .state import State
 from typing import override
-from _common.data_structures import ObservableMapping, ObservableSet
+from atmta_study_tool._common.data_structures import ObservableMapping, ObservableSet
 from .state import State
 from collections.abc import Callable, Set, Mapping
-from language import Symbol, Word
+from atmta_study_tool.language import Symbol, Word
 from functools import reduce
 
 

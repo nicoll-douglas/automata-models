@@ -1,8 +1,6 @@
 import pytest
-from fsa.models.state import State
-from fsa.models.transition_table import TransitionTable
-from language.models.symbol import Symbol
-from language.models.word import Word
+from atmta_study_tool.fsa.models import State, TransitionTable
+from atmta_study_tool.language.models import Symbol, Word
 from collections.abc import Callable
 from .types import TransitionCountData
 

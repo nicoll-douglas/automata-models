@@ -1,6 +1,6 @@
 from ..models import FSAType, State, FSA
 from .subset_construction import subset_construction
-from language import Word
+from atmta_study_tool.language import Word
 
 
 def _dfa_accepts(dfa: FSA, word: Word) -> bool:

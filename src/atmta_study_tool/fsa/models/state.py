@@ -1,5 +1,5 @@
 from __future__ import annotations
-from _common.data_structures import UID
+from atmta_study_tool._common.data_structures import UID
 
 
 class State(UID[str]):

@@ -1,12 +1,8 @@
 import pytest
-from fsa.models.fsa import FSA
-from fsa.models.state import State
-from fsa.models.transition_table import TransitionTable
-from language.models.alphabet import Alphabet
-from language.models.symbol import Symbol
-from language.models.word import Word
+from atmta_study_tool.fsa.models import FSA, State, TransitionTable
+from atmta_study_tool.language.models import Alphabet, Symbol, Word
 from collections.abc import Callable, Set
-from _common.utils import create_unique_objs_amongst
+from atmta_study_tool._common.utils import create_unique_objs_amongst
 
 # TODO: docstrings
 # TODO: more tests

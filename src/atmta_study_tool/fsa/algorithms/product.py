@@ -3,7 +3,7 @@ from ..models import FSA, State
 from typing import Literal
 from collections import deque
 from .epsilon_remove import epsilon_remove
-from language import Alphabet
+from atmta_study_tool.language import Alphabet
 
 
 # represents an acceptance strategy for whether a product FSA state should be a final state

@@ -1,4 +1,4 @@
-from _common.data_structures import ObservableSet
+from atmta_study_tool._common.data_structures import ObservableSet
 from .symbol import Symbol
 from collections.abc import Iterable
 

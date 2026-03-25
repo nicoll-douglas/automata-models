@@ -1,4 +1,4 @@
-from _common.data_structures import SetDict
+from atmta_study_tool._common.data_structures import SetDict
 from .state import State
 from collections.abc import Set, Collection
 

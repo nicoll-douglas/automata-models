@@ -1,6 +1,6 @@
-from _common.data_structures.uid import UID
+from atmta_study_tool._common.data_structures import UID
 from typing import Any
-from language.models.symbol import Symbol
+from atmta_study_tool.language.models import Symbol
 
 
 class TestUID:
