@@ -44,7 +44,7 @@ class ObservableMapping[K, V](MutableMapping[K, V]):
             return self._data[key]
 
         if hasattr(self.__class__, "__missing__"):
-            return self.__class__.__missing__(self, key)
+            return self.__class__.__missing__(self, key)  # type: ignore
 
         raise KeyError(key)
 

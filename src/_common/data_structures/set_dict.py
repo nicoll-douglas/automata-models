@@ -13,9 +13,9 @@ class SetDict[T, U](UserDict[frozenset[T], U]):
             else None
         )
 
-    def _key(self, iterable: Collection[T]) -> frozenset[T]:
-        """Get the underlying key in the dictionary for an iterable."""
-        return frozenset(iterable)
+    def _key(self, collection: Collection[T]) -> frozenset[T]:
+        """Get the underlying key in the dictionary for a collection."""
+        return frozenset(collection)
 
     @override
     def __setitem__(self, key: Collection[T], value: U) -> None:
