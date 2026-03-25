@@ -3,9 +3,10 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "my_package"
+name = "atmta-study-tool"
 version = "0.1.0"
 requires-python = ">=3.14"
+description = "A programmatic study tool for studying state machines"
 dependencies = [
     "graphviz",
 ]
@@ -14,6 +15,7 @@ dependencies = [
 dev = [
     "mypy",
     "black",
+    "pytest>=9.0.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -36,3 +38,13 @@ mypy_path = "src"
 [[tool.mypy.overrides]]
 module = "graphviz.*"
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = "-ra -q"
+testpaths = [
+    "test",
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
