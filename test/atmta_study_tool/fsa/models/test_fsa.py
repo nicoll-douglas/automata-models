@@ -81,7 +81,7 @@ def symbol_not_in_valid_fsa(valid_fsa: FSA) -> Symbol:
     return create_unique_objs_amongst(
         valid_fsa.alphabet,
         factory=lambda counter: Symbol(f"{counter}"),
-        initial=Symbol(""),
+        initial=Symbol("X"),
     )
 
 

@@ -22,15 +22,10 @@ class UID[T]:
             return cast(Self, UID._REGISTRY[key])
 
         instance: Self = super().__new__(cls)
+        instance._uid = uid
         UID._REGISTRY[key] = instance
 
         return instance
-
-    def __init__(self, uid: T):
-        if hasattr(self, "_uid"):
-            return
-
-        self._uid = uid
 
     def __getnewargs__(self) -> tuple[T]:
         return (self.UID,)
