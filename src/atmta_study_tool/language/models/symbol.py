@@ -2,14 +2,16 @@ from __future__ import annotations
 from atmta_study_tool._common.data_structures import UID
 from atmta_study_tool._common.constants import EPSILON_UID
 import unicodedata
+from typing import Self
 
 # TODO: add tests for the validate_uid method
 
 
 class Symbol(UID[str]):
-    def __init__(self, uid: str):
+    def __new__(cls, uid: str) -> Self:
         Symbol._validate_uid(uid)
-        super().__init__(uid)
+
+        return super().__new__(cls, uid)
 
     @staticmethod
     def _validate_uid(uid: str):
