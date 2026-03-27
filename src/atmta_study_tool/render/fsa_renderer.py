@@ -4,9 +4,10 @@ from collections.abc import Set
 from os import PathLike
 from atmta_study_tool.fsa import FSA, State, TransitionTable
 from ._image_renderer import ImageRenderer
+from ._text_renderer import TextRenderer
 
 
-class FSARenderer(ImageRenderer):
+class FSARenderer(TextRenderer, ImageRenderer):
     """Represents a renderer object that can render FSA diagrams."""
 
     # whether to combine multiple transitions between two states into one edge
@@ -19,6 +20,21 @@ class FSARenderer(ImageRenderer):
         self.combine_edges = combine_edges
 
         super().__init__("fsa")
+
+    def print_formal(self, fsa: FSA) -> None:
+        """Print the given FSA as its formal 5-tuple definition."""
+        five_tuple: str = self._get_tuple_str(
+            [
+                self._get_set_str(fsa.alphabet),
+                self._get_set_str(fsa.states),
+                # TODO: add easy way to get string representation of transitions
+                self._get_set_str(fsa.final_states),
+                str(fsa.initial_state),
+                self._get_set_str(fsa.final_states),
+            ]
+        )
+
+        print(five_tuple)
 
     def render_image(
         self, fsa: FSA, filename: PathLike | str, open_file: bool = False
