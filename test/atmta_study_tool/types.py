@@ -1,4 +1,4 @@
-from atmta_study_tool.fsa.models import State
+from atmta_study_tool.automata.models import State
 from atmta_study_tool.language.models import Word, Symbol
 from typing import Literal
 

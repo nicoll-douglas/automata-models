@@ -2,7 +2,8 @@ from graphviz import Digraph
 from collections import defaultdict
 from collections.abc import Set
 from os import PathLike
-from atmta_study_tool.fsa import FSA, State, TransitionTable
+from atmta_study_tool.automata import State, TransitionTable
+from atmta_study_tool.fsa import FSA
 from ._image_renderer import ImageRenderer
 from ._text_renderer import TextRenderer
 from pathlib import Path

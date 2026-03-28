@@ -1,9 +1,10 @@
 from __future__ import annotations
-from ..models import FSA, State, FSAType
+from ..models import FSA, FSAType
 from typing import Literal
 from collections import deque
 from .epsilon_remove import epsilon_remove
 from atmta_study_tool.language import Alphabet
+from atmta_study_tool.automata import State
 
 
 # represents an acceptance strategy for whether a product FSA state should be a final state

@@ -1,13 +1,20 @@
 from .fsa_type import FSAType
-from .transition_table import TransitionTable
 from collections import deque
 from atmta_study_tool._common.data_structures import (
     ObservableSet,
     ObservableSetController,
 )
-from atmta_study_tool.language import Alphabet, Word, Symbol
-from collections.abc import Set
-from .state import State
+from atmta_study_tool.automata import (
+    State,
+    state_from,
+    states_from,
+    StateLike,
+    Transition,
+    TransitionLike,
+    TransitionTable,
+)
+from atmta_study_tool.language import Alphabet, Word, Symbol, SymbolLike
+from collections.abc import Set, Mapping
 
 
 class FSA:
@@ -26,11 +33,15 @@ class FSA:
 
     def __init__(
         self,
-        initial_state: State,
-        states: Set[State],
-        alphabet: Alphabet | None = None,
-        transition_table: TransitionTable | None = None,
-        final_states: Set[State] | None = None,
+        initial_state: StateLike,
+        states: Set[StateLike],
+        alphabet: Set[SymbolLike] | Alphabet | None = None,
+        transition_table: (
+            Mapping[tuple[StateLike, TransitionLike], Set[StateLike]]
+            | TransitionTable
+            | None
+        ) = None,
+        final_states: Set[StateLike] | None = None,
     ):
         self.initial_state = initial_state
         self.states = states
@@ -45,10 +56,15 @@ class FSA:
         return self._states
 
     @states.setter
-    def states(self, new_value: Set[State]) -> None:
-        if self.initial_state not in new_value:
+    def states(self, new_value: Set[StateLike]) -> None:
+        state_iter = states_from(new_value)
+
+        if (
+            self.initial_state not in new_value
+            and self.initial_state.UID not in new_value
+        ):
             raise ValueError(
-                f"Expected a set of states containing the initial state {self.initial_state!r}. Got {new_value}."
+                f"Expected a set of state-likes containing the initial state {self.initial_state!r} or its UID {self.initial_state.UID!r}. Got {new_value!r}."
             )
 
         def _pre_discard(state: State) -> None:
@@ -66,7 +82,7 @@ class FSA:
                 next_states.discard(state)
 
         self._states = ObservableSet[State](
-            new_value, post_discard=_post_discard, pre_discard=_pre_discard
+            state_iter, post_discard=_post_discard, pre_discard=_pre_discard
         )
 
         if hasattr(self, "_final_states"):
@@ -74,18 +90,20 @@ class FSA:
 
         if hasattr(self, "_transition_table"):
             self.transition_table.remove_such_that(
-                lambda key, _: key[0] not in new_value
+                lambda key, _: key[0] not in self.states
             )
 
             for next_states in self.transition_table.values():
-                next_states -= next_states - new_value
+                next_states -= next_states - self.states
 
     @property
     def initial_state(self) -> State:
         return self._initial_state
 
     @initial_state.setter
-    def initial_state(self, new_value: State) -> None:
+    def initial_state(self, new_value: StateLike) -> None:
+        new_value = state_from(new_value)
+
         if hasattr(self, "_states"):
             self._validate_states_contain(new_value)
 
@@ -96,9 +114,9 @@ class FSA:
         return self._final_states
 
     @final_states.setter
-    def final_states(self, new_value: Set[State]) -> None:
+    def final_states(self, new_value: Set[StateLike]) -> None:
         self._final_states = ObservableSet[State](
-            new_value, pre_add=self._validate_states_contain
+            states_from(new_value), pre_add=self._validate_states_contain
         )
 
     @property
@@ -106,7 +124,10 @@ class FSA:
         return self._alphabet
 
     @alphabet.setter
-    def alphabet(self, new_value: Alphabet) -> None:
+    def alphabet(self, new_value: Alphabet | Set[SymbolLike]) -> None:
+        if not isinstance(new_value, Alphabet):
+            new_value = Alphabet(new_value)
+
         def _post_discard(symbol: Symbol) -> None:
             self.transition_table.remove_such_that(lambda key, _: symbol == key[1])
 
@@ -116,7 +137,7 @@ class FSA:
 
         if hasattr(self, "_transition_table"):
             self.transition_table.remove_such_that(
-                lambda key, _: key[1] not in new_value
+                lambda key, _: key[1] not in self.alphabet and key[1] != Word.EPSILON
             )
 
     @property
@@ -124,21 +145,26 @@ class FSA:
         return self._transition_table
 
     @transition_table.setter
-    def transition_table(self, new_value: TransitionTable) -> None:
-        def _pre_setitem(
-            key: TransitionTable.Key, value: TransitionTable.Value
-        ) -> None:
+    def transition_table(
+        self,
+        new_value: (
+            Mapping[tuple[StateLike, TransitionLike], Set[StateLike]] | TransitionTable
+        ),
+    ) -> None:
+        if not isinstance(new_value, TransitionTable):
+            new_value = TransitionTable(new_value)
+
+        def _pre_setitem(key: tuple[State, Transition], value: Set[State]) -> None:
             start_state: State
-            symbol: Symbol | Word
+            symbol: Transition
             start_state, symbol = key
 
             self._validate_states_contain(start_state)
-
-            self._validate_transition_symbol(symbol)
+            self._validate_transition(symbol)
 
             if not value <= self.states:
                 raise ValueError(
-                    f"Expected the set of next states to be a subset of the set of states {self.states}. Got {value}."
+                    f"Expected the set of next states to be a subset of the set of states {self.states!r}. Got {value!r}."
                 )
 
         new_value._pre_setitem = _pre_setitem
@@ -228,9 +254,11 @@ class FSA:
 
         return unproductive_states
 
-    def delta(self, states: State | Set[State], symbol: Symbol | Word) -> set[State]:
+    def delta(
+        self, states: StateLike | Set[StateLike], symbol: TransitionLike
+    ) -> set[State]:
         """Get the set of next states for a given state (or given states) and symbol in the transition table."""
-        if isinstance(states, State):
+        if not isinstance(states, Set):
             return set(self.transition_table[(states, symbol)])
 
         delta_states: set[State] = set()
@@ -240,7 +268,7 @@ class FSA:
 
         return delta_states
 
-    def epsilon_closure(self, states: Set[State]) -> set[State]:
+    def epsilon_closure(self, states: Set[StateLike]) -> set[State]:
         """Get the epsilon-closure of a set of states in the FSA.
 
         Args:
@@ -249,7 +277,7 @@ class FSA:
         Returns:
             The epsilon-closure which contains all states that can be reached by only following epsilon-transitions from the given states. At minimum this will be a set states including all the given states.
         """
-        closure: set[State] = set(states)
+        closure: set[State] = set(states_from(states))
         queue: deque[State] = deque(closure)
 
         while queue:
@@ -270,9 +298,9 @@ class FSA:
                 f"Expected a state in the set of states {self.states}. Got {state!r}."
             )
 
-    def _validate_transition_symbol(self, symbol: Symbol | Word) -> None:
+    def _validate_transition(self, symbol: Transition) -> None:
         """Validate that the given symbol or word is a valid symbol for a transition in the FSA."""
-        if symbol not in self.alphabet and symbol != Word.EPSILON:
+        if isinstance(symbol, Symbol) and symbol not in self.alphabet:
             raise ValueError(
-                f"Expected a symbol in the alphabet {self.alphabet} or {Word.EPSILON!r}. Got {symbol!r}."
+                f"Expected a symbol in the alphabet {self.alphabet}. Got {symbol!r}."
             )
