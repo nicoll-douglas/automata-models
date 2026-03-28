@@ -24,8 +24,6 @@ class ObservableMapping[K, V](MutableMapping[K, V]):
         post_setitem: Callable[[K, V], None] | None = None,
         pre_delitem: Callable[[K], None] | None = None,
         post_delitem: Callable[[K], None] | None = None,
-        /,
-        **kwargs,
     ):
         self._data = {}
         self._pre_setitem = pre_setitem
@@ -36,10 +34,7 @@ class ObservableMapping[K, V](MutableMapping[K, V]):
         if mapping is not None:
             self.update(mapping)
 
-        if kwargs:
-            self.update(kwargs)
-
-    def __getitem__(self, key) -> V:
+    def __getitem__(self, key: K) -> V:
         if key in self._data:
             return self._data[key]
 
