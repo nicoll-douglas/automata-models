@@ -1,6 +1,7 @@
-from ..models import State, FSA
+from ..models import FSA
 from copy import deepcopy
 from atmta_study_tool._common.utils import create_unique_objs_amongst
+from atmta_study_tool.automata import State
 
 
 def complete(fsa: FSA) -> FSA:

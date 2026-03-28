@@ -5,8 +5,6 @@ __all__ = [
     "FSA",
     "FSAType",
     "MarkingTable",
-    "State",
-    "TransitionTable",
     "accepts",
     "complement",
     "complete",

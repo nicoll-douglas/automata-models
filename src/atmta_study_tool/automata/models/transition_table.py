@@ -2,19 +2,16 @@ from __future__ import annotations
 from .state import State
 from typing import override
 from atmta_study_tool._common.data_structures import ObservableMapping, ObservableSet
-from .state import State
-from collections.abc import Callable, Set, Mapping
-from atmta_study_tool.language import Symbol, Word
+from collections.abc import Callable, Set, Iterable, Mapping
 from functools import reduce
+from ..types import StateLike, Transition, TransitionLike
+from ..utils import state_from, states_from, validate_epsilon, transition_from
 
 
 class TransitionTable(
-    ObservableMapping[tuple[State, Symbol | Word], ObservableSet[State]]
+    ObservableMapping[tuple[State, Transition], ObservableSet[State]]
 ):
-    """Represents the transition table for an FSA."""
-
-    type Key = tuple[State, Symbol | Word]
-    type Value = ObservableSet[State]
+    """Represents the transition table for an automaton."""
 
     # hook function to run before a state is added to a set of next states
     _pre_value_add: Callable[[State], None] | None = None
@@ -25,20 +22,23 @@ class TransitionTable(
     # hook function to run before a state is removed from a set of next states
     _post_value_discard: Callable[[State], None] | None = None
 
-    def __init__(self, mapping: Mapping[Key, Set[State]] | None = None):
-        initial_table: dict[TransitionTable.Key, TransitionTable.Value] | None = (
-            None
-            if mapping is None
-            else {k: self._create_observable_value(v) for k, v in mapping.items()}
-        )
+    def __init__(
+        self,
+        mapping: (
+            Mapping[tuple[StateLike, TransitionLike], Set[StateLike]] | None
+        ) = None,
+    ):
+        super().__init__()
 
-        super().__init__(initial_table)
+        if mapping is not None:
+            for key, value in mapping.items():
+                self[key] = value
 
-    def _create_observable_value(self, value: Set[State] | None = None) -> Value:
+    def _value(self, value: Iterable[StateLike]) -> ObservableSet[State]:
         """Create an observable set with value-add and value-discard hooks for the given set of states."""
         # here we use lambdas to create closures and take advantage of late binding instead of passing direct attributes
         return ObservableSet[State](
-            value,
+            states_from(value),
             pre_add=lambda state: (
                 None if self._pre_value_add is None else self._pre_value_add(state)
             ),
@@ -57,32 +57,34 @@ class TransitionTable(
             ),
         )
 
+    def _key(self, key: tuple[StateLike, TransitionLike]) -> tuple[State, Transition]:
+        """Create a key in the transition table from a key-like tuple."""
+        return (state_from(key[0]), transition_from(key[1]))
+
     @override
-    def __setitem__(self, key: Key, value: Set[State]) -> None:
-        self._validate_transition_symbol(key[1])
+    def __setitem__(
+        self, key: tuple[StateLike, TransitionLike], value: Set[StateLike]
+    ) -> None:
+        super().__setitem__(self._key(key), self._value(value))
 
-        super().__setitem__(
-            key,
-            (
-                value
-                if isinstance(value, ObservableSet)
-                else self._create_observable_value(value)
-            ),
-        )
+    def __getitem__(
+        self, key: tuple[StateLike, TransitionLike]
+    ) -> ObservableSet[State]:
+        return super().__getitem__(self._key(key))
 
-    def _validate_transition_symbol(self, symbol: Symbol | Word) -> None:
-        """Validate that the given symbol is a valid transition symbol."""
-        if isinstance(symbol, Word) and symbol != Word.EPSILON:
-            raise ValueError(f"Expected a symbol or {Word.EPSILON}. Got {symbol!r}.")
+    @override
+    def __delitem__(self, key: tuple[StateLike, TransitionLike]) -> None:
+        return super().__delitem__(self._key(key))
 
-    def __missing__(self, key: Key) -> Value:
+    def __missing__(self, key: tuple[State, Transition]) -> ObservableSet[State]:
         """Add the given key to the table, mapping to an empty observable set."""
-        new_value: TransitionTable.Value = self._create_observable_value()
-        self[key] = new_value
+        self[key] = set()
 
-        return new_value
+        return self[key]
 
-    def remove_such_that(self, match: Callable[[Key, Value], bool]) -> None:
+    def remove_such_that(
+        self, match: Callable[[tuple[State, Transition], ObservableSet[State]], bool]
+    ) -> None:
         """Remove items from the transition table based on the given matching function.
 
         Args:
@@ -92,7 +94,7 @@ class TransitionTable(
             if match(key, value):
                 del self[key]
 
-    def transition_count(self, entity: Symbol | Word | State | None = None) -> int:
+    def transition_count(self, entity: Transition | State | None = None) -> int:
         """Return the number of transitions in the transition table involving the given symbol, the given state, or in total if none given."""
         if entity is None:
             return reduce(lambda sum, v: len(v) + sum, self.values(), 0)
@@ -104,10 +106,11 @@ class TransitionTable(
                 + self.outgoing_transition_count(entity)
             )
 
-        self._validate_transition_symbol(entity)
+        validate_epsilon(entity)
 
         def _reducer(
-            sum: int, table_item: tuple[TransitionTable.Key, TransitionTable.Value]
+            sum: int,
+            table_item: tuple[tuple[State, Transition], ObservableSet[State]],
         ) -> int:
             (_, transition_symbol), value = table_item
 
@@ -122,11 +125,12 @@ class TransitionTable(
             0,
         )
 
-    def incoming_transition_count(self, state: State) -> int:
+    def incoming_transition_count(self, state: StateLike) -> int:
         """Return the number of incoming transitions to the given state."""
+        state = state_from(state)
 
         def _reducer(
-            sum: int, item: tuple[TransitionTable.Key, TransitionTable.Value]
+            sum: int, item: tuple[tuple[State, Transition], ObservableSet[State]]
         ) -> int:
             (start_state, _), next_states = item
 
@@ -137,17 +141,19 @@ class TransitionTable(
 
         return reduce(_reducer, self.items(), 0)
 
-    def outgoing_transition_count(self, state: State) -> int:
+    def outgoing_transition_count(self, state: StateLike) -> int:
         """Return the number of outgoing transitions from the given state."""
+        state = state_from(state)
 
         def _reducer(
-            sum: int, item: tuple[TransitionTable.Key, TransitionTable.Value]
+            sum: int, item: tuple[tuple[State, Transition], ObservableSet[State]]
         ) -> int:
             (start_state, _), next_states = item
 
             if start_state == state:
                 sum += len(next_states)
 
+                # exclude the loop transition
                 if state in next_states:
                     sum -= 1
 
@@ -155,11 +161,12 @@ class TransitionTable(
 
         return reduce(_reducer, self.items(), 0)
 
-    def loop_transition_count(self, state: State) -> int:
+    def loop_transition_count(self, state: StateLike) -> int:
         """Return the number of loop transitions at the given state."""
+        state = state_from(state)
 
         def _reducer(
-            sum: int, item: tuple[TransitionTable.Key, TransitionTable.Value]
+            sum: int, item: tuple[tuple[State, Transition], ObservableSet[State]]
         ) -> int:
             (start_state, _), next_states = item
 

@@ -1,5 +1,5 @@
 import pytest
-from atmta_study_tool.fsa.models import State, TransitionTable
+from atmta_study_tool.automata.models import State, TransitionTable
 from atmta_study_tool.language.models import Symbol, Word
 from collections.abc import Callable
 from .types import TransitionCountData

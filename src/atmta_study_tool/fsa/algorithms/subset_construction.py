@@ -1,9 +1,10 @@
 from __future__ import annotations
-from ..models import FSA, State
+from ..models import FSA
 from collections import deque
 from copy import deepcopy
 from collections.abc import Set
 from atmta_study_tool.language import Symbol
+from atmta_study_tool.automata import State
 
 
 class _NewDFAState:

@@ -1,5 +1,6 @@
 import pytest
-from atmta_study_tool.fsa.models import FSA, State, TransitionTable
+from atmta_study_tool.automata.models import State, TransitionTable
+from atmta_study_tool.fsa.models import FSA
 from atmta_study_tool.language.models import Alphabet, Symbol, Word
 from collections.abc import Callable, Set
 from atmta_study_tool._common.utils import create_unique_objs_amongst

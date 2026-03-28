@@ -1,6 +1,7 @@
 from .subset_construction import subset_construction
 from collections.abc import Set
-from ..models import FSA, State
+from ..models import FSA
+from atmta_study_tool.automata import State
 
 
 def complement(fsa: FSA) -> FSA:
