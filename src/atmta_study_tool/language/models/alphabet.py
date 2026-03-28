@@ -2,6 +2,7 @@ from atmta_study_tool._common.data_structures import ObservableSet
 from .symbol import Symbol
 from collections.abc import Iterable
 from ..types import SymbolLike
+from ..utils import symbols_from
 
 
 class Alphabet(ObservableSet[Symbol]):
@@ -16,4 +17,4 @@ class Alphabet(ObservableSet[Symbol]):
 
             return
 
-        super().__init__((Symbol(s) if isinstance(s, str) else s) for s in symbols)
+        super().__init__(symbols_from(symbols))

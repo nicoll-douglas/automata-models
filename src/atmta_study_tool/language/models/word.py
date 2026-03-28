@@ -4,6 +4,7 @@ from typing import override, SupportsIndex, overload, cast
 from collections.abc import Iterable
 from atmta_study_tool._common.constants import EPSILON_UID
 from ..types import SymbolLike
+from ..utils import symbols_from
 
 
 class Word(tuple[Symbol, ...]):
@@ -16,9 +17,7 @@ class Word(tuple[Symbol, ...]):
         if iterable is None:
             return super().__new__(cls)
 
-        return super().__new__(
-            cls, ((Symbol(s) if isinstance(s, str) else s) for s in iterable)
-        )
+        return super().__new__(cls, symbols_from(iterable))
 
     def __repr__(self):
         return f"{self.__class__.__name__}({super().__repr__()})"
