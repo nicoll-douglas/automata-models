@@ -3,8 +3,11 @@ from .algorithms import *
 
 __all__ = [
     "FSA",
-    "FSAType",
+    "AbstractFSA",
+    "EpsilonFSA",
+    "State",
     "MarkingTable",
+    "TransitionTable",
     "accepts",
     "complement",
     "complete",
