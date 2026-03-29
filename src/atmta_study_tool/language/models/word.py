@@ -3,8 +3,6 @@ from .symbol import Symbol
 from typing import override, SupportsIndex, overload, cast
 from collections.abc import Iterable
 from atmta_study_tool._common.constants import EPSILON_UID
-from ..types import SymbolLike
-from ..utils import symbols_from
 
 
 class Word(tuple[Symbol, ...]):
@@ -13,11 +11,11 @@ class Word(tuple[Symbol, ...]):
     # the empty word
     EPSILON: Word
 
-    def __new__(cls, iterable: Iterable[SymbolLike] | None = None) -> Word:
+    def __new__(cls, iterable: Iterable[Symbol] | None = None) -> Word:
         if iterable is None:
             return super().__new__(cls)
 
-        return super().__new__(cls, symbols_from(iterable))
+        return super().__new__(cls, iterable)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({super().__repr__()})"
