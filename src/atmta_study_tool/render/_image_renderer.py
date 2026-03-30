@@ -1,13 +1,19 @@
 from pathlib import Path
+from abc import abstractmethod
+from os import PathLike
+from typing import Literal
+from ._renderer import Renderer
 
 
-class ImageRenderer:
+class ImageRenderer(Renderer):
     """Represents an image renderer that outputs images to disk."""
 
-    # the default directory where renders should go relative to the cwd of the program
-    _BASE_RENDER_DIR: Path = Path("renders")
     # the output directory where rendered images should go
-    _render_dir: Path
+    _IMAGE_RENDER_DIR: Path = Renderer._RENDER_DIR / "img"
 
-    def __init__(self, render_dir: Path | str) -> None:
-        self._render_dir = ImageRenderer._BASE_RENDER_DIR / render_dir
+    type ImageFormat = Literal["png", "jpg", "jpeg", "svg", "webp", "ascii"]
+
+    @abstractmethod
+    def image(self, filename: PathLike | str, format: ImageFormat) -> None:
+        """Render an image with the given filename and format."""
+        pass
