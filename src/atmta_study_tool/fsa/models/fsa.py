@@ -129,6 +129,12 @@ class FSA[U = str](AbstractFSA[U]):
     def subset_construction(
         self, *, complete: bool = False, normalize: bool = False
     ) -> FSA[frozenset[State[U]]] | FSA[str]:
+        """Create and return a new, equivalent DFA using the subset construction algorithm.
+
+        Args:
+            complete: Whether the resulting DFA should be complete.
+            normalize: Whether to normalize the state UIDs in the DFA (i.e make them strings instead of sets).
+        """
         initial_state: State[frozenset[State[U]]] = State(
             frozenset(self.epsilon_closure({self.initial_state})), label=str_set
         )
@@ -203,9 +209,13 @@ class FSA[U = str](AbstractFSA[U]):
     ) -> FSA[frozenset[State[frozenset[State[U]]]]]: ...
 
     def minimized(
-        self, *, normalize: bool = False
+        self, *, normalize: bool = True
     ) -> FSA[frozenset[State[frozenset[State[U]]]]] | FSA[str]:
-        """Perform the FSA minimization algorithm on the given FSA to create and return a new, minimized FSA."""
+        """Perform the FSA minimization algorithm on the given FSA to create and return a new, minimized FSA.
+
+        Args:
+            normalize: Whether to normalize the state UIDs in the resulting FSA (i.e make them strings instead of sets).
+        """
 
         dfa: FSA[frozenset[State[U]]] = self.subset_construction(complete=True)
         marking_table: MarkingTable = MarkingTable(dfa.states)
@@ -284,6 +294,7 @@ class FSA[U = str](AbstractFSA[U]):
         return min_dfa.normalize_states() if normalize else min_dfa
 
     def normalize_states(self) -> FSA:
+        """Create and return a new, equivalent FSA with states labelled as strings q0-qn."""
         final_states: set[State[str]] = set()
 
         state_map: dict[State[U], State[str]] = {}
@@ -390,6 +401,14 @@ class FSA[U = str](AbstractFSA[U]):
         acceptance: Literal["union", "difference", "xor", "intersection"],
         other_final_states: Set[State[U]],
     ) -> bool:
+        """Return True if the given state is a final state when creating a product FSA, otherwise False.
+
+        Args:
+            state: A new state in the product FSA.
+            acceptance: The acceptance strategy for determining whether it is a final state.
+            other_final_states: The set of final states in the other FSA being used in the product.
+        """
+
         state_self, state_other = state.UID
 
         if acceptance == "union":
