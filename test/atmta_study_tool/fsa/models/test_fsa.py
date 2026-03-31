@@ -1,6 +1,5 @@
 import pytest
-from atmta_study_tool.automata.models import State, TransitionTable
-from atmta_study_tool.fsa.models import FSA
+from atmta_study_tool.fsa.models import FSA, State, TransitionTable
 from atmta_study_tool.language.models import Alphabet, Symbol, Word
 from collections.abc import Callable, Set
 from atmta_study_tool._common.utils import create_unique_objs_amongst
@@ -269,13 +268,12 @@ class TestFSA:
                 (valid_fsa.initial_state, symbol_not_in_valid_fsa)
             ] = {valid_fsa_state}
 
-    def test_set_transitions_rejects_non_epsilon_word(
-        self, valid_fsa: FSA, non_epsilon_word: Word, valid_fsa_state: State
+    def test_set_transitions_accepts_epsilon(
+        self, valid_fsa: FSA, valid_fsa_state: State
     ):
-        with pytest.raises(ValueError):
-            valid_fsa.transition_table[(valid_fsa.initial_state, non_epsilon_word)] = {
-                valid_fsa_state
-            }
+        valid_fsa.transition_table[(valid_fsa.initial_state, Symbol.EPSILON)] = {
+            valid_fsa_state
+        }
 
     def test_set_transitions_validates_next_states(
         self,

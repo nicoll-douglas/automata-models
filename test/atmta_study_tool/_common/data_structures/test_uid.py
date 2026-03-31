@@ -1,9 +1,16 @@
 from atmta_study_tool._common.data_structures import UID
 from typing import Any
 from atmta_study_tool.language.models import Symbol
+import pytest
 
 
 class TestUID:
+    @pytest.fixture(autouse=True)
+    def cleanup_uid_registry(self):
+        UID._clear_registry()
+
+        yield
+
     def test_same_class_interning(self):
         """Test that the UID class correctly interns two UID objects with the same class and UID attribute.
 

@@ -22,6 +22,8 @@ class TransitionTable[U = str](
         self,
         mapping: Mapping[tuple[State[U], Symbol], Set[State[U]]] | None = None,
     ):
+        self._data = {}
+
         if mapping is not None:
             for key, value in mapping.items():
                 self[key] = value
@@ -52,8 +54,6 @@ class TransitionTable[U = str](
 
     @override
     def __getitem__(self, key: tuple[State[U], Symbol]) -> ObservableSet[State[U]]:
-        self._validate_key(key)
-
         if key in self._data:
             return self._data[key]
 
@@ -68,11 +68,11 @@ class TransitionTable[U = str](
 
     @override
     def __delitem__(self, key: tuple[State[U], Symbol]) -> None:
-        self._validate_key(key)
-
         del self._data[key]
 
     def __missing__(self, key: tuple[State[U], Symbol]) -> ObservableSet[State[U]]:
+        self._validate_key(key)
+
         value: ObservableSet[State[U]] = self._value()
         self._data[key] = value
 

@@ -1,5 +1,5 @@
 import pytest
-from atmta_study_tool.automata.models import State, TransitionTable
+from atmta_study_tool.fsa.models import State, TransitionTable
 from atmta_study_tool.language.models import Symbol, Word
 from collections.abc import Callable
 from .types import TransitionCountData
@@ -31,14 +31,14 @@ def transition_table_states(
 @pytest.fixture
 def transition_table_symbols(
     make_symbols: Callable[[int], tuple[Symbol, ...]],
-) -> tuple[tuple[Symbol, ...], Word]:
-    return (make_symbols(3), Word.EPSILON)
+) -> tuple[tuple[Symbol, ...], Symbol]:
+    return (make_symbols(3), Symbol.EPSILON)
 
 
 @pytest.fixture
 def transition_table(
     transition_table_states: tuple[State, ...],
-    transition_table_symbols: tuple[tuple[Symbol, ...], Word],
+    transition_table_symbols: tuple[tuple[Symbol, ...], Symbol],
 ) -> TransitionTable:
     q: tuple[State, ...] = transition_table_states
     s, epsilon = transition_table_symbols
@@ -61,7 +61,7 @@ def transition_table(
 @pytest.fixture
 def transition_table_counts(
     transition_table_states: tuple[State, ...],
-    transition_table_symbols: tuple[tuple[Symbol, ...], Word],
+    transition_table_symbols: tuple[tuple[Symbol, ...], Symbol],
 ) -> TransitionCountData:
     q: tuple[State, ...] = transition_table_states
     s, epsilon = transition_table_symbols

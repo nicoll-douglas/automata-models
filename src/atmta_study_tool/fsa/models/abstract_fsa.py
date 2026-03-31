@@ -118,12 +118,16 @@ class AbstractFSA[U = str](ABC):
 
         ObservableSetController(new_value).set_post_discard(_post_discard)
 
-        old_alphabet: Alphabet = self.alphabet
+        old_alphabet: Alphabet | None = None
+
+        if hasattr(self, "_alphabet"):
+            old_alphabet = self.alphabet
+
         self._alphabet = new_value
 
-        if hasattr(self, "_transition_table"):
+        if hasattr(self, "_transition_table") and old_alphabet is not None:
             self.transition_table.remove_such_that(
-                lambda key, _: key[1] in (old_alphabet - self.alphabet)
+                lambda key, _: key[1] in (old_alphabet - new_value)
             )
 
     @property
