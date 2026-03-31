@@ -23,7 +23,7 @@ class TransitionGraphRenderer[F: AbstractFSA](ImageRenderer):
         """Insert nodes into the transition graph."""
         for state in self.fsa.states:
             graph.node(
-                state.UID,
+                str(state),
                 shape=("doublecircle" if state in self.fsa.final_states else "circle"),
             )
 
@@ -32,8 +32,8 @@ class TransitionGraphRenderer[F: AbstractFSA](ImageRenderer):
         for (start_state, symbol), next_states in self.fsa.transition_table.items():
             for next_state in next_states:
                 graph.edge(
-                    start_state.UID,
-                    next_state.UID,
+                    str(start_state),
+                    str(next_state),
                     label=str(symbol),
                 )
 
@@ -46,12 +46,14 @@ class TransitionGraphRenderer[F: AbstractFSA](ImageRenderer):
                 transition_labels[(start_state, next_state)].add(str(symbol))
 
         for (start_state, next_state), labels in transition_labels.items():
-            graph.edge(start_state.UID, next_state.UID, label=", ".join(sorted(labels)))
+            graph.edge(
+                str(start_state), str(next_state), label=", ".join(sorted(labels))
+            )
 
     def _insert_initial_state_arrow(self, graph: Digraph) -> None:
         """Insert the arrow that points to the node of the initial state into the transition graph."""
         graph.node("start", label="", shape="none", width="0", height="0")
-        graph.edge("start", self.fsa.initial_state.UID)
+        graph.edge("start", str(self.fsa.initial_state))
 
     def image(
         self,

@@ -379,7 +379,7 @@ class FSA[U = str](AbstractFSA[U]):
                 for self_delta in self.delta(current_state.UID[0], symbol):
                     for other_delta in other.delta(current_state.UID[1], symbol):
                         discovered_state: State[tuple[State[U], State[U]]] = State(
-                            (self_delta, other_delta)
+                            (self_delta, other_delta), label=str_tuple
                         )
 
                         if no_unreachable:

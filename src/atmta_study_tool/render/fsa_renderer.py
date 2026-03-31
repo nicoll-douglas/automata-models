@@ -2,9 +2,10 @@ from .printer import Printer
 from .transition_graph_renderer import TransitionGraphRenderer
 from atmta_study_tool.fsa import FSA
 from atmta_study_tool._common.utils import str_set, str_tuple
+from typing import Any
 
 
-class FSARenderer(TransitionGraphRenderer[FSA], Printer):
+class FSARenderer(TransitionGraphRenderer[FSA[Any]], Printer):
     """Represents a renderer object that can render FSAs."""
 
     def formal(self) -> str:
